@@ -427,7 +427,7 @@ let viewMode="drill";
 function setViewMode(m){
   viewMode=m;
   const btn=document.getElementById("btn-tree");
-  btn.textContent=m==="tree"?"🔙 返回流转";
+  btn.textContent=m==="tree"?"🔙 返回流转":"🌳 总览";
   const list=document.getElementById("list");
   const tree=document.getElementById("treeView");
   const crumbbox=document.querySelector(".crumbbox");
