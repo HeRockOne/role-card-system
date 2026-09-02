@@ -96,10 +96,15 @@ main{padding:14px 18px 26px;max-width:1080px;margin:0 auto;}
 .treeGroup{color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.5px;margin:20px 0 6px;}
 .treeRow{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid transparent;border-radius:var(--radius-sm);cursor:pointer;font-size:13.5px;flex-wrap:wrap;transition:background .12s,border-color .12s;}
 .treeRow:hover{background:var(--card);border-color:var(--line);box-shadow:var(--shadow);}
-.treeLine{color:var(--muted);font-family:Consolas,monospace;font-size:11px;min-width:14px;}
+.treeLine{color:var(--muted);font-family:Consolas,monospace;font-size:12px;min-width:14px;}
+.toggle-arrow{color:var(--accent);font-weight:bold;cursor:pointer;transition:transform .15s;}
+.leaf-dot{color:var(--line);font-weight:bold;}
 .treeName{font-weight:700;}
 .treeMeta{color:var(--muted);font-size:11.5px;}
 .treeHit{color:var(--green);font-size:11.5px;}
+.tree-detail{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:var(--radius-sm);padding:4px 10px;font-size:12px;cursor:pointer;margin-left:auto;transition:border-color .15s;}
+.tree-detail:hover{border-color:var(--accent);color:var(--accent-ink);}
+.tag.k-lv{background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent-ink);font-size:11px;padding:2px 8px;}
 
 /* ===== 视图切换 tab ===== */
 .viewtabs{display:flex;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:3px;box-shadow:var(--shadow);}
@@ -459,43 +464,70 @@ function setViewMode(m){
   else renderAll();
 }
 
-/* ================= 树状全局总览 ================= */
+/* ================= 树状全局总览（按职级层级，可折叠） ================= */
+let treeExpanded=new Set(); // 展开状态（存 card id）
 function renderTree(){
   const box=document.getElementById("treeView");
   const kw=searchKw.toLowerCase();
   const all=ALL();
-  const childrenOfLocal=p=>all.filter(c=>c.parentId===p);
   const roots=all.filter(c=>!c.parentId||!findCard(c.parentId));
+  /* 搜索时保持匹配节点可见（含其祖先） */
   function subtreeVisible(id){
     const c=findCard(id); if(!c) return false;
     if(!kw||matchesKw(c,kw)) return true;
     return childrenOfLocal(id).some(k=>subtreeVisible(k.id));
   }
-  function treeHTML(id,depth){
+  /* 渲染节点：折叠/展开状态由 treeExpanded 控制 */
+  function nodeHTML(id,depth){
     const c=findCard(id); if(!c) return "";
     const m=!kw||matchesKw(c,kw);
     const kids=childrenOfLocal(id).filter(k=>subtreeVisible(k.id));
     if(!m&&!kids.length) return "";
-    const line=depth?("\u2514\u2500 ".padStart(depth*2+2,"\u00A0")):"●";
-    let h=`<div class="treeRow" style="padding-left:${depth*22}px" onclick="openDrawer('${c.id}')">
-      <span class="treeLine">${line}</span>
+    const expanded=treeExpanded.has(id);
+    const hasKids=kids.length>0;
+    const lv=c.level||(kindOf(c)==="total"?1:kindOf(c)==="sub"?3:6);
+    const arrow=hasKids?(expanded?"▾":"▸"):"·";
+    const arrowCls=hasKids?"toggle-arrow":"leaf-dot";
+    let h=`<div class="treeRow" data-id="${esc(c.id)}" style="padding-left:${depth*24}px" onclick="toggleTreeNode('${c.id}')">
+      <span class="treeLine ${arrowCls}">${arrow}</span>
       <span class="tag k-${kindOf(c)}">${KIND_LABEL[kindOf(c)]}</span>
+      <span class="tag k-lv">${lv}级</span>
       <span class="treeName">${esc(c.name)}</span>
-      <span class="treeMeta">${esc(c.sect||"")} / ${esc(c.hall||"")} / ${c.level?(""+c.level+"级"):""}${c.parentId?` ↑ ${esc((findCard(c.parentId)||{}).name||"")}`:""}</span>
+      <span class="treeMeta">${esc(c.hall||"")}${c.sect&&c.sect!=="全公司"?(" · "+esc(c.sect)):""}</span>
       ${m&&kw?'<span class="treeHit">✓命中</span>':''}
+      <button class="tree-detail" onclick="event.stopPropagation();openDrawer('${c.id}')">📄 详情</button>
     </div>`;
-    kids.forEach(k=>{ h+=treeHTML(k.id,depth+1); });
+    if(hasKids&&expanded){
+      kids.forEach(k=>{ h+=nodeHTML(k.id,depth+1); });
+    }
     return h;
+  }
+  /* 默认展开所有有子节点的节点 */
+  if(treeExpanded.size===0){
+    roots.forEach(r=>treeExpanded.add(r.id));
+    all.forEach(c=>{ if(childrenOfLocal(c.id).length) treeExpanded.add(c.id); });
   }
   let html="";
   roots.forEach(r=>{
-    html+=`<div class="treeGroup">— 继承根: ${esc(r.name)}</div>`;
-    html+=treeHTML(r.id,0);
+    html+=`<div class="treeGroup">— ${esc(r.name)}</div>`;
+    html+=nodeHTML(r.id,0);
   });
   const total=all.filter(c=>!kw||matchesKw(c,kw)).length;
   document.getElementById("f-count").textContent="共 "+total+" 张";
   box.innerHTML=html||'<div class="empty">没有匹配的角色卡</div>';
 }
+/* 点击节点：有子节点→展开/收起；无子节点→展开看详情 */
+function toggleTreeNode(id){
+  const kids=childrenOfLocal(id);
+  if(kids.length>0){
+    if(treeExpanded.has(id)) treeExpanded.delete(id);
+    else treeExpanded.add(id);
+    renderTree();
+  } else {
+    openDrawer(id);
+  }
+}
+function childrenOfLocal(id){ return ALL().filter(c=>c.parentId===id); }
 
 /* ================= 流转链：面包屑 + 层级列表 ================= */
 function renderCrumbs(){
