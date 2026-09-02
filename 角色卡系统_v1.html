@@ -108,30 +108,36 @@ main{padding:14px 18px 26px;max-width:1080px;margin:0 auto;}
 .vtab:hover{color:var(--accent-ink);}
 .vtab.active{background:var(--card);color:var(--accent-ink);font-weight:600;box-shadow:var(--shadow);}
 
-/* ===== 组织结构图（orgchart 库） ===== */
+/* ===== 组织结构图（orgchart 库，覆盖默认样式） ===== */
 .orgWrap{overflow-x:auto;padding:2px 2px 14px;}
 #orgBody{min-height:420px;overflow:auto;}
 .orgbar{display:flex;align-items:center;gap:12px;margin:4px 0 14px;flex-wrap:wrap;}
 .orgbar label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;}
 .orgbar select{padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:13.5px;min-height:40px;}
 .orgbar select:focus{outline:none;border-color:var(--accent);}
-/* 节点卡片（orgchart 库 .node 内直接放我们的模板 HTML） */
-.org-node-card{min-width:150px;max-width:220px;text-align:left;}
-.org-node-top{display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap;}
-.org-node-name{font-size:14px;font-weight:700;color:var(--ink);line-height:1.35;margin-bottom:2px;}
-.org-node-meta{font-size:11.5px;color:var(--muted);margin-bottom:3px;}
-.org-node-acc{font-size:11.5px;color:var(--muted);line-height:1.5;opacity:.9;}
-.orgchart .node.org-hit .org-node-card{border:2px solid var(--green)!important;box-shadow:0 0 0 2px var(--green-soft),var(--shadow)!important;border-radius:12px;}
-.orgchart .node .org-node-card{min-width:150px;max-width:220px;text-align:left;}
-.orgchart{background:transparent!important;}
+/* orgchart 容器：去边框、居中、全宽 */
+.orgchart{background:none!important;display:block!important;padding:24px 12px 12px!important;border:none!important;position:relative;}
+.orgchart > ul > li{display:flex;justify-content:center;}
+/* 连线：红色→灰色 */
+.orgchart .hierarchy::before,
+.orgchart .hierarchy:not(.couple) > .node:has(+ .nodes)::after,
+.orgchart > ul > li > ul li > .node::before,
+.orgchart .hierarchy.couple:only-child::before,
+.orgchart .couple:first-child:not(:only-child)::before,
+.orgchart .couple:last-child:not(:only-child)::before{border-color:var(--line)!important;background-color:var(--line)!important;}
+/* 节点：加圆角、边框、背景色，区分层级 */
+.orgchart .node{border:2px solid var(--line)!important;border-radius:12px!important;background:var(--card)!important;margin:0 0 24px 0!important;padding:0!important;transition:box-shadow .2s,transform .2s;}
+.orgchart .node:hover{box-shadow:var(--shadow-lg)!important;transform:translateY(-2px)!important;}
+/* 节点头：类型标签行 */
+.orgchart .node .title{background:var(--accent-soft)!important;color:var(--accent-ink)!important;font-size:12px!important;font-weight:600!important;width:auto!important;height:auto!important;line-height:normal!important;white-space:normal!important;padding:10px 14px 8px!important;border-radius:10px 10px 0 0!important;border-bottom:1px solid var(--line)!important;overflow:visible!important;text-align:left;}
+/* 节点内容：十维摘要 */
+.orgchart .node .content{width:auto!important;height:auto!important;line-height:normal!important;font-size:13px!important;border:1px solid var(--line)!important;border-width:0 1px 1px 1px!important;border-radius:0 0 10px 10px!important;padding:8px 14px 10px!important;white-space:normal!important;text-align:left;color:var(--ink)!important;background:var(--card)!important;}
+/* 节点白色子项容器(.nodes) */
+.orgchart ul li .nodes{padding:0;}
+.orgchart ul li ul{padding-top:24px;}
+/* 搜索命中节点高亮 */
+.orgchart .node.org-hit{border-color:var(--green)!important;box-shadow:0 0 0 2px var(--green-soft),var(--shadow)!important;}
 .orgchart .node{cursor:pointer;}
-.orgchart .node .title{background:var(--card);border:1px solid var(--line);border-radius:10px 10px 0 0;color:var(--ink);padding:10px 12px 6px;box-shadow:var(--shadow);}
-.orgchart .node .content{background:var(--card);border:1px solid var(--line);border-top:none;border-radius:0 0 10px 10px;color:var(--ink);box-shadow:var(--shadow);padding:2px 10px 10px;}
-.orgchart .lines .downLine{background-color:var(--line);}
-.orgchart .lines .topLine{border-top-color:var(--line);}
-.orgchart .lines .leftLine{border-left-color:var(--line);}
-.orgchart .lines .rightLine{border-right-color:var(--line);}
-.orgchart .toggleBtn{color:var(--muted);}
 
 /* ===== 抽屉 ===== */
 .drawer{position:fixed;top:0;right:-520px;width:500px;max-width:100vw;height:100%;height:100dvh;background:var(--card);
