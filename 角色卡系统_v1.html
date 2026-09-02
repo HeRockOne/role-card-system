@@ -91,6 +91,16 @@ main{padding:14px 18px 26px;max-width:1080px;margin:0 auto;}
 .empty button{margin:4px 6px;}
 .empty .big{font-size:30px;}
 
+/* ===== 树状总览 ===== */
+.treeView{padding:4px 0 20px;}
+.treeGroup{color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.5px;margin:20px 0 6px;}
+.treeRow{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid transparent;border-radius:var(--radius-sm);cursor:pointer;font-size:13.5px;flex-wrap:wrap;transition:background .12s,border-color .12s;}
+.treeRow:hover{background:var(--card);border-color:var(--line);box-shadow:var(--shadow);}
+.treeLine{color:var(--muted);font-family:Consolas,monospace;font-size:11px;min-width:14px;}
+.treeName{font-weight:700;}
+.treeMeta{color:var(--muted);font-size:11.5px;}
+.treeHit{color:var(--green);font-size:11.5px;}
+
 /* ===== 抽屉 ===== */
 .drawer{position:fixed;top:0;right:-520px;width:500px;max-width:100vw;height:100%;height:100dvh;background:var(--card);
   border-left:1px solid var(--line);transition:right .26s ease;overflow-y:auto;z-index:60;padding:20px;box-shadow:var(--shadow-lg);}
@@ -168,6 +178,7 @@ footer{padding:16px 18px 28px;color:var(--muted);font-size:11.5px;text-align:cen
     <small>总卡 → 分卡 → 实例卡 · 三层继承 · 点卡片向下钻 · 点面包屑向上回</small>
   </div>
   <div class="tools">
+    <button class="tbtn" id="btn-tree" onclick="setViewMode('tree')">🌳 总览</button>
     <button class="tbtn primary" onclick="openNewFromCurrent()">＋ 新建卡片</button>
     <button class="tbtn" id="btn-theme" onclick="toggleTheme()">🌙</button>
     <button class="tbtn" onclick="exportJSON()">⭳ 导出</button>
@@ -181,11 +192,12 @@ footer{padding:16px 18px 28px;color:var(--muted);font-size:11.5px;text-align:cen
 
 <main>
   <div class="searchRow">
-    <input type="search" id="f-search" placeholder="🔍 搜名称 / 宗门 / 堂口 / 层级 / 摘要…" oninput="setSearch(this.value)">
+    <input type="search" id="f-search" placeholder="🔍 搜名称 / 宗门 / 堂口 / 层级 / 摘要…">
     <span class="count" id="f-count"></span>
   </div>
   <div class="tip" id="f-tip">💡 点卡片 = 钻到它的下一级；点「↑ 父卡」或面包屑 = 向上回流；「📄 详情」看全部 10 维定义。</div>
   <div class="list" id="list"></div>
+  <div class="treeView" id="treeView" style="display:none"></div>
 </main>
 
 <footer>
@@ -410,6 +422,67 @@ let openCardId=null;
 
 function setSearch(v){ searchKw=v.trim(); closeDrawer(); renderAll(); }
 
+/* ================= 视图模式：drill(层级下钻) / tree(全局树状) ================= */
+let viewMode="drill";
+function setViewMode(m){
+  viewMode=m;
+  const btn=document.getElementById("btn-tree");
+  btn.textContent=m==="tree"?"🔙 返回流转";
+  const list=document.getElementById("list");
+  const tree=document.getElementById("treeView");
+  const crumbbox=document.querySelector(".crumbbox");
+  const tip=document.getElementById("f-tip");
+  if(m==="tree"){
+    list.style.display="none"; tree.style.display="block";
+    if(crumbbox) crumbbox.style.display="none";
+    if(tip) tip.style.display="none";
+    renderTree();
+  } else {
+    list.style.display=""; tree.style.display="none";
+    if(crumbbox) crumbbox.style.display="";
+    if(tip) tip.style.display="";
+    renderAll();
+  }
+}
+
+/* ================= 树状全局总览 ================= */
+function renderTree(){
+  const box=document.getElementById("treeView");
+  const kw=searchKw.toLowerCase();
+  const all=ALL();
+  const childrenOfLocal=p=>all.filter(c=>c.parentId===p);
+  const roots=all.filter(c=>!c.parentId||!findCard(c.parentId));
+  function subtreeVisible(id){
+    const c=findCard(id); if(!c) return false;
+    if(!kw||matchesKw(c,kw)) return true;
+    return childrenOfLocal(id).some(k=>subtreeVisible(k.id));
+  }
+  function treeHTML(id,depth){
+    const c=findCard(id); if(!c) return "";
+    const m=!kw||matchesKw(c,kw);
+    const kids=childrenOfLocal(id).filter(k=>subtreeVisible(k.id));
+    if(!m&&!kids.length) return "";
+    const line=depth?("\u2514\u2500 ".padStart(depth*2+2,"\u00A0")):"●";
+    let h=`<div class="treeRow" style="padding-left:${depth*22}px" onclick="openDrawer('${c.id}')">
+      <span class="treeLine">${line}</span>
+      <span class="tag k-${kindOf(c)}">${KIND_LABEL[kindOf(c)]}</span>
+      <span class="treeName">${esc(c.name)}</span>
+      <span class="treeMeta">${esc(c.sect||"")} / ${esc(c.hall||"")} / ${esc(c.level||"")}${c.parentId?` ↑ ${esc((findCard(c.parentId)||{}).name||"")}`:""}</span>
+      ${m&&kw?'<span class="treeHit">✓命中</span>':''}
+    </div>`;
+    kids.forEach(k=>{ h+=treeHTML(k.id,depth+1); });
+    return h;
+  }
+  let html="";
+  roots.forEach(r=>{
+    html+=`<div class="treeGroup">— 继承根: ${esc(r.name)}</div>`;
+    html+=treeHTML(r.id,0);
+  });
+  const total=all.filter(c=>!kw||matchesKw(c,kw)).length;
+  document.getElementById("f-count").textContent="共 "+total+" 张";
+  box.innerHTML=html||'<div class="empty">没有匹配的角色卡</div>';
+}
+
 /* ================= 流转链：面包屑 + 层级列表 ================= */
 function renderCrumbs(){
   const el=document.getElementById("crumbs");
@@ -479,7 +552,10 @@ function clickCard(id){
 }
 
 /* ================= 渲染入口 ================= */
-function renderAll(){ renderCrumbs(); renderList(); }
+function renderAll(){
+  if(viewMode==="tree"){ renderTree(); return; }
+  renderCrumbs(); renderList();
+}
 
 /* ================= 抽屉：10 维详情 ================= */
 function openDrawer(id){
