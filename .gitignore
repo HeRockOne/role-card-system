@@ -6,3 +6,6 @@
 .DS_Store
 Thumbs.db
 *.tmp
+
+# 上游思维导图构建源（不入库，本地 npm 构建用）
+mind-map-main/
