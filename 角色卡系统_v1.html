@@ -657,9 +657,8 @@ function onKindChange(){
   const kind=document.getElementById("f-kind").value;
   const sel=document.getElementById("f-parent");
   sel.innerHTML='<option value="">无</option>';
-  /* 按职级数字过滤：所有 level < 当前 level 的卡都能选为父卡（不限类型） */
-  const curLv=Number(document.getElementById("f-level")?.value)||1;
-  const list=ALL().filter(c=>(c.level||0)<curLv && (kind!=="total"||c.id!==editingId));
+  /* 所有卡都能选为上级（不限职级），只排除自己 */
+  const list=ALL().filter(c=>c.id!==editingId);
   list.forEach(c=>{ const o=document.createElement("option"); o.value=c.id; o.text="[L"+(c.level||"?")+"·"+esc(c.name)+"]"; sel.appendChild(o); });
   document.getElementById("f-parenthint").textContent=
     kind==="total"?"总卡为独立卡，无父卡（它就是一家公司）":
