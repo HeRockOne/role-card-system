@@ -107,28 +107,23 @@ main{padding:14px 18px 26px;max-width:1080px;margin:0 auto;}
 .vtab:hover{color:var(--accent-ink);}
 .vtab.active{background:var(--card);color:var(--accent-ink);font-weight:600;box-shadow:var(--shadow);}
 
-/* ===== 组织结构图(从上到下) ===== */
+/* ===== 组织结构图（从上到下，按职级分行） ===== */
 .orgWrap{overflow-x:auto;padding:2px 2px 14px;}
-.org{display:flex;flex-direction:column;align-items:center;gap:0;min-width:520px;padding:28px 16px 20px;}
-.org-lvl{display:flex;justify-content:center;gap:22px;}
-.org-stem{position:relative;display:flex;flex-direction:column;align-items:center;}
-.org-vline{width:2px;height:18px;background:var(--line);}
-.org-hline{position:absolute;bottom:0;left:50%;transform:translateX(-50%);height:2px;background:var(--line);}
-.org-branch{display:flex;flex-direction:column;align-items:center;gap:0;}
-.org-l3{display:flex;flex-direction:column;gap:10px;padding-top:18px;}
+.org{position:relative;display:flex;flex-direction:column;align-items:center;gap:0;min-width:560px;padding:24px 16px 30px;}
+.orow{position:relative;display:flex;justify-content:center;align-items:flex-start;gap:18px;padding:34px 0 4px;flex-wrap:wrap;}
 .onode{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;cursor:pointer;
-  min-width:176px;max-width:210px;box-shadow:var(--shadow);transition:border-color .15s,transform .12s,box-shadow .15s;}
+  min-width:176px;max-width:230px;box-shadow:var(--shadow);transition:border-color .15s,transform .12s,box-shadow .15s;z-index:2;}
 .onode:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow-lg);}
 .onode.hit{border-color:var(--green);box-shadow:0 0 0 2px var(--green-soft),var(--shadow);}
 .onode .tag{font-size:10px;}
+.tag.k-lv{background:var(--card);border:1px solid var(--line);color:var(--muted);margin-left:2px;}
+.tag.k-lv.lv-1{background:var(--accent);border-color:var(--accent);color:#fff;}
+.tag.k-lv.lv-2,.tag.k-lv.lv-3{background:var(--yellow-soft);border-color:var(--yellow);color:var(--yellow);}
 .oname{font-size:14.5px;font-weight:700;margin:5px 0 2px;line-height:1.35;}
 .ometa{font-size:11.5px;color:var(--muted);margin-bottom:4px;}
 .oacc{font-size:11.5px;color:var(--ink);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:.85;}
 .ohit{font-size:10.5px;color:var(--green);font-weight:600;margin-top:4px;}
 .onode.k-root{border-width:2px;border-color:var(--accent);background:var(--accent-soft);}
-.org-branch>.onode::before,.org-branch>.ovoid::before{content:'';position:absolute;top:-18px;left:50%;width:2px;height:18px;background:var(--line);}
-.ovoid{position:relative;border:1px dashed var(--line);border-radius:10px;padding:12px 14px;min-width:176px;text-align:center;
-  color:var(--muted);font-size:12px;background:transparent;}
 .orgbar{display:flex;align-items:center;gap:12px;margin:4px 0 14px;flex-wrap:wrap;}
 .orgbar label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;}
 .orgbar select{padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:13.5px;min-height:40px;}
@@ -259,14 +254,16 @@ footer{padding:16px 18px 28px;color:var(--muted);font-size:11.5px;text-align:cen
       <select id="f-kind" onchange="onKindChange()">
         <option value="sub">分卡（继承总卡）</option>
         <option value="instance">实例卡（继承分卡）</option>
-        <option value="total">总卡（独立）</option>
+        <option value="total">总卡（公司老板）</option>
       </select></div>
     <div class="field"><span class="hint" id="f-parenthint"></span>
       <select id="f-parent" onchange="onParentChange()"><option value="">无</option></select></div>
     <div class="field"><label>名称 *</label><input id="f-name" placeholder="如：制造公司-采购总监"></div>
     <div class="field"><label>行业类型</label><input id="f-sect" placeholder="中型制造 / 电商 / 外贸"></div>
     <div class="field"><label>部门</label><input id="f-hall" placeholder="财务 / 市场 / 运营"></div>
-    <div class="field"><label>职级</label><input id="f-level" placeholder="总监 / 主管 / VP"></div>
+    <div class="field"><label>职级（1-10 数字）</label>
+      <select id="f-level" onchange="onLevelChange()"></select>
+      <span class="hint" id="f-levelhint">1=老板/CEO；数字越大职级越低。总卡固定 1 级，分卡建议 2-5，实例卡建议 6-10。</span></div>
     <div class="field"><label>一句话摘要</label><textarea id="f-account" placeholder="账本摘要，如：KPI=成本/应收/审计，怕呆坏账"></textarea></div>
     <div class="field"><span class="hint">维度编辑：只写与父层不同的内容。提示「🌳 继承自」=该维自动继承，不用填；清空已有值并保存 = 撤销这条覆盖。</span></div>
     <div id="dim-editor"></div>
@@ -297,22 +294,22 @@ const DIM_GUIDE = {
  "红线雷区":"什么一票否决？碰了就死？例：虚报费用、隐瞒坏账"
 };
 
-/* 种子数据：总卡（公司级共性） */
+/* 种子数据：总卡（公司老板 / level 1） */
 const TOTAL_CARDS = [
- {id:"total-boss",name:"全行业CEO",sect:"通用模板",hall:"CEO/总经理",level:"总",
-  account:"定方向、活下来。最怕亏钱爆雷，只算三行账：出活、添麻烦、干多久。",
+ {id:"total-boss",name:"互联网公司",sect:"互联网/电商",hall:"CEO/创始人",level:1,
+  account:"定方向、活在变化里。最怕增长停滞、融资断、核心团队流失。",
   dims:{
-   "身份档案":"决策层，对全部部门有最终裁决权",
-   "权杖边界":"预算审批、人事任命、战略方向、跨部门仲裁",
-   "使命与账本":"盈利与现金流；识人用人与团队驾驭力",
-   "恐惧清单":"现金流失血、核心人跑路、重大合规爆雷",
-   "弦外之音":"'原则上同意'=基本不同意；'你看着办'=出事你扛",
-   "决策风格":"直觉+数据混合，喜欢确定性，讨厌惊喜（尤其坏惊喜）",
-   "沟通频道":"听结论不听过程；带方案做选择题，不做问答题",
-   "资源网络":"上游资方/董事会，平级高管联盟，下游向心力",
-   "考核与晋升":"九宫格定位：绩效×潜力；德勇才排序，德第一",
-   "红线雷区":"造假、抢功甩锅、越级架空、凌驾业务一票否决"}},
- {id:"total-func",name:"制造公司",sect:"中型制造",hall:"CEO/总经理",level:"总",
+   "身份档案":"创始人/CEO，对产品/运营/技术全团队有最终裁决权",
+   "权杖边界":"融资、战略、人事任命、预算终审",
+   "使命与账本":"增长、留存、现金流；识人用人与团队驾驭力",
+   "恐惧清单":"增长停滞、融资断裂、核心人跳槽、合规爆雷",
+   "弦外之音":"'这个再想想'=不同意；'你觉得呢'=考你算账",
+   "决策风格":"数据+直觉，快决策快试错，讨厌慢",
+   "沟通频道":"听结论带数据；讲增长的账，不讲过程",
+   "资源网络":"上游资本/董事会，平级生态伙伴，下游铁杆团队",
+   "考核与晋升":"九宫格：绩效×潜力；第一忠诚与担当",
+   "红线雷区":"数据造假、抢功甩锅、越级架空、亏空现金流一票否决"}},
+ {id:"total-func",name:"制造公司",sect:"中型制造",hall:"CEO/总经理",level:1,
   account:"制造行业最终决策人。控良率、产能、交付、客户。最怕停线、客户流失、资金断裂。",
   dims:{
    "身份档案":"制造公司最终决策人，对生产/运营/职能全部门有裁决权",
@@ -329,7 +326,7 @@ const TOTAL_CARDS = [
 
 /* 分卡：只存差异（delta），继承父卡 */
 const SUB_CARDS = [
- {id:"sub-fin-mfg",parentId:"total-func",name:"制造公司-财务总监",sect:"中型制造",hall:"财务",level:"总监",
+ {id:"sub-fin-mfg",parentId:"total-func",name:"制造公司-财务总监",sect:"中型制造",hall:"财务",level:3,
   account:"管钱不算货。KPI=成本/应收/审计，怕呆坏账。",
   dims:{
    "身份档案":"职能部门负责人，直属CEO，管钱不管仓库",
@@ -341,7 +338,7 @@ const SUB_CARDS = [
    "沟通频道":"递报表+成本一页纸；先报忧后报喜",
    "考核与晋升":"审计通过率+成本控制达标",
    "红线雷区":"虚报费用、隐瞒坏账"}},
- {id:"sub-mkt-mfg",parentId:"total-func",name:"制造公司-市场总监",sect:"中型制造",hall:"市场",level:"总监",
+ {id:"sub-mkt-mfg",parentId:"total-func",name:"制造公司-市场总监",sect:"中型制造",hall:"市场",level:3,
   account:"签单、守客户、防丢失。KPI=销售额/复购。",
   dims:{
    "身份档案":"利润部门负责人，直连客户与渠道",
@@ -353,7 +350,7 @@ const SUB_CARDS = [
    "沟通频道":"说客户故事，要资源给数字（ROI）",
    "考核与晋升":"业绩达成+客户满意度",
    "红线雷区":"乱承诺交期、低价冲量伤害毛利"}},
- {id:"sub-log-mfg",parentId:"total-func",name:"制造公司-运营总监",sect:"中型制造",hall:"运营/仓储",level:"总监",
+ {id:"sub-log-mfg",parentId:"total-func",name:"制造公司-运营总监",sect:"中型制造",hall:"运营/仓储",level:3,
   account:"货得发、仓得清、别断供。KPI=时效/库存。",
   dims:{
    "身份档案":"执行部门负责人，管仓管车队发货退货",
@@ -365,7 +362,7 @@ const SUB_CARDS = [
    "沟通频道":"报进度报风险，要支持讲影响",
    "考核与晋升":"准时率+差错率双指标",
    "红线雷区":"隐瞒库存差异、压单不报"}},
- {id:"sub-des-mfg",parentId:"total-func",name:"制造公司-设计总监",sect:"中型制造",hall:"设计/研发",level:"总监",
+ {id:"sub-des-mfg",parentId:"total-func",name:"制造公司-设计总监",sect:"中型制造",hall:"设计/研发",level:3,
   account:"图对、样合格、别返工。KPI=图纸一次通过率。",
   dims:{
    "身份档案":"技术部门负责人，管设计团队与样品",
@@ -377,7 +374,7 @@ const SUB_CARDS = [
    "沟通频道":"讲技术原因要讲人话，别甩术语",
    "考核与晋升":"一次通过率+项目按时率",
    "红线雷区":"隐瞒设计缺陷、甩锅工艺"}},
- {id:"sub-pro-mfg",parentId:"total-func",name:"制造公司-生产总监",sect:"中型制造",hall:"生产",level:"总监",
+ {id:"sub-pro-mfg",parentId:"total-func",name:"制造公司-生产总监",sect:"中型制造",hall:"生产",level:3,
   account:"线得开、良率保、别停线。KPI=良率/产能。",
   dims:{
    "身份档案":"产线负责人，管工人工序排期",
@@ -393,7 +390,7 @@ const SUB_CARDS = [
 
 /* 实例卡：只存补丁，继承分卡 */
 const INSTANCE_CARDS = [
- {id:"ins-lixx",parentId:"sub-log-mfg",name:"李XX(实际)",sect:"中型制造",hall:"运营/退货组",level:"主管",
+ {id:"ins-lixx",parentId:"sub-log-mfg",name:"李XX(实际)",sect:"中型制造",hall:"运营/退货组",level:6,
   account:"退货组主管，月均507笔，错误率≤0.5%，5个Python工具，独立写SOP 173行。",
   patches:{
    "身份档案":"2人退货组主管(带1人)，直属运营总监",
@@ -403,12 +400,12 @@ const INSTANCE_CARDS = [
    "决策风格":"实操先行，先做能做的，时间线拆解法",
    "沟通频道":"数据说话(507笔/173行/2天)；主动认错纠口径",
    "红线雷区":"绝不做阿酥式包装；诚实是护城河"}},
- {id:"ins-zhangfin",parentId:"sub-fin-mfg",name:"张财务(实际)",sect:"中型制造",hall:"财务",level:"总监",
+ {id:"ins-zhangfin",parentId:"sub-fin-mfg",name:"张财务(实际)",sect:"中型制造",hall:"财务",level:3,
   account:"付款审批、预算控制，怕呆坏账和账实不符。",
   patches:{
    "弦外之音":"他说'再想想'=不同意(会议室皱眉那次)",
    "沟通频道":"特批前先备齐单据，别拿口头承诺"}},
- {id:"ins-wlmaster",parentId:"sub-log-mfg",name:"王主管(实际)",sect:"中型制造",hall:"运营/仓储",level:"总监",
+ {id:"ins-wlmaster",parentId:"sub-log-mfg",name:"王主管(实际)",sect:"中型制造",hall:"运营/仓储",level:3,
   account:"管仓发货，怕断供爆仓。",
   patches:{
    "恐惧清单":"退货组数据出错会连带他背锅",
@@ -450,6 +447,8 @@ function chainOf(card){
   return arr;
 }
 const KIND_LABEL={total:"总卡",sub:"分卡",instance:"实例卡"};
+const LEVEL_NAMES={1:"老板/CEO",2:"C级高管",3:"总监",4:"高级经理",5:"经理",6:"主管",7:"资深员工",8:"员工",9:"初级",10:"实习"};
+function levelName(lv){ const n=LEVEL_NAMES[Number(lv)]; return n?(""+lv+"级·"+n):(lv!=null&&lv!==""?""+lv+"级":""); }
 const SRC_CLASS={inherit:"src-inherit",total:"src-total",sub:"src-override",patch:"src-patch"};
 const SRC_LABEL={inherit:"继承(未定义)",total:"总卡共性",sub:"分卡定义",patch:"个人补丁"};
 const SRC_TIP={inherit:"整条链都没定义，显示占位",total:"跨行业共性，由总卡定义",sub:"该分卡的特殊定义（差异下沉）",patch:"实例卡的个人补丁（只归本人）"};
@@ -506,39 +505,68 @@ function renderOrg(){
   const hit=c=>!kw||matchesKw(c,kw);
   function node(c,extra){
     const h=hit(c);
-    return `<div class="onode ${extra||""}${h&&kw?" hit":""}" onclick="openDrawer('${c.id}')">
+    const lv=c.level||(kindOf(c)==="total"?1:kindOf(c)==="sub"?3:6);
+    return `<div class="onode ${extra||""}${h&&kw?" hit":""}" data-oid="${c.id}" onclick="openDrawer('${c.id}')">
       <span class="tag k-${kindOf(c)}">${KIND_LABEL[kindOf(c)]}</span>
+      <span class="tag k-lv lv-${lv}">${lv}级</span>
       <div class="oname">${esc(c.name)}</div>
-      <div class="ometa">${esc(c.hall||"")}${c.level?(" · "+esc(c.level)):""}${c.sect&&c.sect!=="全公司"?(" · "+esc(c.sect)):""}</div>
+      <div class="ometa">${esc(c.hall||"")}${levelName(lv)?(" · "+esc(levelName(lv))):""}${c.sect&&c.sect!=="全公司"?(" · "+esc(c.sect)):""}</div>
       ${c.account?`<div class="oacc">${esc(c.account.slice(0,44))}${c.account.length>44?"…":""}</div>`:""}
       ${h&&kw?'<div class="ohit">✓ 命中</div>':''}
     </div>`;
   }
-  const voidN=()=>'<div class="ovoid">— 暂无下属<br><span style="font-size:10.5px">可新建下级</span></div>';
-  const l2=childrenOf(root.id);
-  let html=`<div class="org">
-    <div class="org-lvl org-l1">${node(root,"k-root")}</div>`;
-  if(l2.length){
-    html+=`<div class="org-stem"><div class="org-vline"></div><div class="org-hline" id="org-hline"></div></div>`;
-    html+=`<div class="org-lvl org-l2">`;
-    l2.forEach(c=>{
-      const kids=childrenOf(c.id);
-      html+=`<div class="org-branch">${node(c)}`;
-      html+=`<div class="org-l3">${kids.length?kids.map(k=>node(k)).join(""):voidN()}</div>`;
-      html+=`</div>`;
-    });
+  /* 收集当前公司整棵子树（根+所有后代） */
+  const collect=id=>{
+    const out=[findCard(id)]; 
+    childrenOf(id).forEach(k=>out.push(...collect(k.id)));
+    return out.filter(Boolean);
+  };
+  const nodes=collect(root.id);
+  /* 按职级分组：level 1 在最上 */
+  const byLv={};
+  nodes.forEach(c=>{ const lv=c.level||(kindOf(c)==="total"?1:kindOf(c)==="sub"?3:6); (byLv[lv]=byLv[lv]||[]).push(c); });
+  const lvs=Object.keys(byLv).map(Number).sort((a,b)=>a-b);
+  let html=`<div class="org">`;
+  lvs.forEach(lv=>{
+    html+=`<div class="orow" data-lv="${lv}">`;
+    byLv[lv].forEach(c=>{ html+=node(c,c.id===root.id?"k-root":""); });
     html+=`</div>`;
-  }
+  });
   html+=`</div>`;
   box.innerHTML=html;
-  /* 横线宽度=org-l2 整体宽度 */
-  const hline=document.getElementById("org-hline");
-  const l2el=document.querySelector(".org-l2");
-  if(hline&&l2el&&l2el.offsetWidth>0) hline.style.width=l2el.offsetWidth+"px";
+  drawOrgLines();
   if(orgCount){
-    const total=1+l2.length+l2.reduce((n,c)=>n+childrenOf(c.id).length,0);
-    orgCount.textContent="共 "+total+" 张卡";
+    orgCount.textContent="共 "+nodes.length+" 张卡";
   }
+}
+/* 用 SVG 画父子连线（父节点底 → 子节点顶） */
+function drawOrgLines(){
+  const org=document.querySelector(".org");
+  if(!org) return;
+  let svg=document.getElementById("org-svg");
+  if(svg) svg.remove();
+  const all=ALL();
+  const W=org.scrollWidth, H=org.scrollHeight;
+  if(!W||!H) return;
+  svg=document.createElementNS?document.createElementNS("http://www.w3.org/2000/svg","svg"):document.createElement("svg");
+  svg.id="org-svg"; svg.setAttribute("width",W); svg.setAttribute("height",H);
+  svg.style.position="absolute"; svg.style.left="0"; svg.style.top="0"; svg.style.pointerEvents="none"; svg.style.zIndex="1";
+  const lineColor=getComputedStyle?getComputedStyle(document.body).getPropertyValue("--line").trim():"#e7e3d8";
+  const elOf=c=>document.querySelector('.onode[data-oid="'+c.id+'"]');
+  let paths="";
+  all.forEach(p=>{
+    const pel=elOf(p); if(!pel) return;
+    const px=pel.offsetLeft+pel.offsetWidth/2, py=pel.offsetTop+pel.offsetHeight;
+    childrenOf(p.id).forEach(k=>{
+      const kel=elOf(k); if(!kel) return;
+      const kx=kel.offsetLeft+kel.offsetWidth/2, ky=kel.offsetTop;
+      if(ky<=py) return;
+      const my=(py+ky)/2;
+      paths+=`<path d="M${px},${py} L${px},${my} L${kx},${my} L${kx},${ky}" fill="none" stroke="${lineColor}" stroke-width="2"/>`;
+    });
+  });
+  svg.innerHTML=paths||"";
+  org.appendChild(svg);
 }
 function onOrgCompany(id){ orgCompany=id; renderOrg(); }
 
@@ -564,7 +592,7 @@ function renderTree(){
       <span class="treeLine">${line}</span>
       <span class="tag k-${kindOf(c)}">${KIND_LABEL[kindOf(c)]}</span>
       <span class="treeName">${esc(c.name)}</span>
-      <span class="treeMeta">${esc(c.sect||"")} / ${esc(c.hall||"")} / ${esc(c.level||"")}${c.parentId?` ↑ ${esc((findCard(c.parentId)||{}).name||"")}`:""}</span>
+      <span class="treeMeta">${esc(c.sect||"")} / ${esc(c.hall||"")} / ${c.level?(""+c.level+"级"):""}${c.parentId?` ↑ ${esc((findCard(c.parentId)||{}).name||"")}`:""}</span>
       ${m&&kw?'<span class="treeHit">✓命中</span>':''}
     </div>`;
     kids.forEach(k=>{ h+=treeHTML(k.id,depth+1); });
@@ -607,6 +635,7 @@ function cardHTML(c){
   return `<div class="card" onclick="clickCard('${c.id}')">
     <div class="cardTop">
       <span class="tag k-${k}">${KIND_LABEL[k]}</span>
+      ${c.level?`<span class="tag k-lv lv-${c.level}">${c.level}级</span>`:""}
       <span class="cname">${esc(c.name)}</span>
       ${kids.length?`<span class="kids">▾ ${kids.length} 张下级</span>`:`<span class="kids none">叶子卡</span>`}
     </div>
@@ -665,7 +694,7 @@ function openDrawer(id){
     .join('<span class="crumb arrow">›</span>');
   let h=`<button class="dclose" onclick="closeDrawer()">×</button>
     <div class="dhead"><span class="tag k-${k}">${KIND_LABEL[k]}</span><span class="dname">${esc(card.name)}</span></div>
-    <div class="dpath">${esc(card.sect||"")} / ${esc(card.hall||"")} / ${esc(card.level||"")}</div>
+    <div class="dpath">${esc(card.sect||"")} / ${esc(card.hall||"")} / ${levelName(card.level)}</div>
     <div class="breadcrumb" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;">${crumb}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
       <button class="mbtn primary" onclick="openEdit('${card.id}')">✏️ 编辑</button>
@@ -712,10 +741,33 @@ function onKindChange(){
   const list=kind==="sub"?TOTAL_CARDS:kind==="instance"?SUB_CARDS:[];
   list.forEach(c=>{ const o=document.createElement("option"); o.value=c.id; o.text="["+KIND_LABEL[kindOf(c)]+"] "+c.name; sel.appendChild(o); });
   document.getElementById("f-parenthint").textContent=
-    kind==="total"?"总卡为独立卡，无父卡":
+    kind==="total"?"总卡为独立卡，无父卡（它就是一家公司）":
     kind==="sub"?"父卡（继承源）：总卡 —— 分卡只写与总卡不同的差异":
     "父卡（继承源）：分卡 —— 实例卡只写这个人的个人补丁";
+  /* 职级联动：总卡锁定 1 级 */
+  const lvSel=document.getElementById("f-level");
+  lvSel.innerHTML="";
+  const from=kind==="total"?1:1, to=10;
+  for(let i=from;i<=to;i++){
+    const o=document.createElement("option"); o.value=i;
+    o.text=i+"级 · "+(LEVEL_NAMES[i]||"");
+    lvSel.appendChild(o);
+  }
+  if(kind==="total") lvSel.value="1";
+  else if(!lvSel.value||Number(lvSel.value)<2) lvSel.value=(kind==="sub"?"3":"6");
+  document.getElementById("f-level").disabled=(kind==="total");
   onParentChange();
+}
+function onLevelChange(){
+  /* 职级 1 = 老板 → 强制总卡 */
+  const lv=Number(document.getElementById("f-level").value);
+  if(lv===1){
+    const kf=document.getElementById("f-kind");
+    kf.value="total"; kf.disabled=true;
+    const sel=document.getElementById("f-parent"); sel.innerHTML='<option value="">无</option>';
+    document.getElementById("f-parenthint").textContent="总卡为独立卡，无父卡（它就是一家公司）";
+    onParentChange();
+  }
 }
 function loadDimEditor(){
   const box=document.getElementById("dim-editor");
@@ -755,7 +807,6 @@ function openNew(kind,preParent){
   document.getElementById("f-name").value="";
   document.getElementById("f-sect").value="";
   document.getElementById("f-hall").value="";
-  document.getElementById("f-level").value="";
   document.getElementById("f-account").value="";
   loadDimEditor();
   onKindChange();
@@ -773,9 +824,10 @@ function openEdit(id){
   document.getElementById("f-name").value=card.name||"";
   document.getElementById("f-sect").value=card.sect||"";
   document.getElementById("f-hall").value=card.hall||"";
-  document.getElementById("f-level").value=card.level||"";
   document.getElementById("f-account").value=card.account||"";
   onKindChange();
+  /* 职级要在 onKindChange 之后设置（那会重建下拉） */
+  if(card.level) document.getElementById("f-level").value=card.level;
   if(card.parentId){
     const sel=document.getElementById("f-parent");
     if(![...sel.options].some(o=>o.value===card.parentId)){
@@ -801,7 +853,7 @@ function createCard(){
   const name=document.getElementById("f-name").value.trim();
   const sect=document.getElementById("f-sect").value.trim();
   const hall=document.getElementById("f-hall").value.trim();
-  const level=document.getElementById("f-level").value.trim();
+  const level=Number(document.getElementById("f-level").value)||1;
   const account=document.getElementById("f-account").value.trim();
   if(!name){ alert("名称必填"); return; }
   if(kind!=="total" && !parent){ alert("分卡/实例卡必须选择父卡（继承源）"); return; }
@@ -820,7 +872,7 @@ function saveEdit(){
   const name=document.getElementById("f-name").value.trim();
   const sect=document.getElementById("f-sect").value.trim();
   const hall=document.getElementById("f-hall").value.trim();
-  const level=document.getElementById("f-level").value.trim();
+  const level=Number(document.getElementById("f-level").value)||1;
   const account=document.getElementById("f-account").value.trim();
   if(!name){ alert("名称必填"); return; }
   if(k!=="total" && !parent){ alert("分卡/实例卡必须选择父卡（继承源）"); return; }
