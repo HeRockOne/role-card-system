@@ -192,7 +192,7 @@ footer{padding:16px 18px 28px;color:var(--muted);font-size:11.5px;text-align:cen
 
 <main>
   <div class="searchRow">
-    <input type="search" id="f-search" placeholder="🔍 搜名称 / 宗门 / 堂口 / 层级 / 摘要…">
+    <input type="search" id="f-search" placeholder="🔍 搜名称 / 行业 / 部门 / 职级 / 摘要…">
     <span class="count" id="f-count"></span>
   </div>
   <div class="tip" id="f-tip">💡 点卡片 = 钻到它的下一级；点「↑ 父卡」或面包屑 = 向上回流；「📄 详情」看全部 10 维定义。</div>
@@ -219,10 +219,10 @@ footer{padding:16px 18px 28px;color:var(--muted);font-size:11.5px;text-align:cen
       </select></div>
     <div class="field"><span class="hint" id="f-parenthint"></span>
       <select id="f-parent" onchange="onParentChange()"><option value="">无</option></select></div>
-    <div class="field"><label>名称 *</label><input id="f-name" placeholder="如：中型制造-采购长老"></div>
-    <div class="field"><label>宗门类型</label><input id="f-sect" placeholder="中型制造 / 电商 / 外贸"></div>
-    <div class="field"><label>堂口</label><input id="f-hall" placeholder="财务 / 市场 / 后勤"></div>
-    <div class="field"><label>层级</label><input id="f-level" placeholder="长老 / 主管 / 宗主"></div>
+    <div class="field"><label>名称 *</label><input id="f-name" placeholder="如：制造公司-采购总监"></div>
+    <div class="field"><label>行业类型</label><input id="f-sect" placeholder="中型制造 / 电商 / 外贸"></div>
+    <div class="field"><label>部门</label><input id="f-hall" placeholder="财务 / 市场 / 运营"></div>
+    <div class="field"><label>职级</label><input id="f-level" placeholder="总监 / 主管 / VP"></div>
     <div class="field"><label>一句话摘要</label><textarea id="f-account" placeholder="账本摘要，如：KPI=成本/应收/审计，怕呆坏账"></textarea></div>
     <div class="field"><span class="hint">维度编辑：只写与父层不同的内容。提示「🌳 继承自」=该维自动继承，不用填；清空已有值并保存 = 撤销这条覆盖。</span></div>
     <div id="dim-editor"></div>
@@ -241,25 +241,25 @@ const DIMS = ["身份档案","权杖边界","使命与账本","恐惧清单","�
 
 /* 十维「人话翻译」：每维一句话提问 + 示例，降低填写门槛 */
 const DIM_GUIDE = {
- "身份档案":"他是谁、什么岗位、在哪个层级？例：退货组主管带1人，直属后勤长老",
+ "身份档案":"他是谁、什么岗位、在哪个层级？例：退货组主管带1人，直属运营总监",
  "权杖边界":"他能批什么、动不了什么？例：批5000内报销，动不了编制和预算",
  "使命与账本":"他的KPI / 账本是什么？例：错误率≤0.5%、月均处理507笔",
  "恐惧清单":"他怕什么？哪句话会踩雷？例：怕账实不符被审计抓",
  "弦外之音":"口头禅背后的真意？例：'再想想'=不同意，'尽量明天发'=明天必须发",
  "决策风格":"他怎么拍板？数据/直觉/共识/独断？例：只信单据凭证",
  "沟通频道":"话往哪递？报表/数据/直给/留痕？例：递报表+成本一页纸，先报忧后报喜",
- "资源网络":"他依赖谁、卡着谁？例：依赖宗主背书，卡财务报销",
- "考核与晋升":"他被谁考核、怎么升？例：宗主打分，绩效×潜力九宫格",
+ "资源网络":"他依赖谁、卡着谁？例：依赖CEO背书，卡财务报销",
+ "考核与晋升":"他被谁考核、怎么升？例：CEO打分，绩效×潜力九宫格",
  "红线雷区":"什么一票否决？碰了就死？例：虚报费用、隐瞒坏账"
 };
 
-/* 种子数据：总卡（宗门级共性） */
+/* 种子数据：总卡（公司级共性） */
 const TOTAL_CARDS = [
- {id:"total-boss",name:"宗主总卡",sect:"全宗门",hall:"宗主",level:"总",
+ {id:"total-boss",name:"CEO总卡",sect:"全公司",hall:"CEO/总经理",level:"总",
   account:"定方向、活下来。最怕亏钱爆雷，只算三行账：出活、添麻烦、干多久。",
   dims:{
-   "身份档案":"决策层，对全部堂口有最终裁决权",
-   "权杖边界":"预算审批、人事任命、战略方向、跨口仲裁",
+   "身份档案":"决策层，对全部部门有最终裁决权",
+   "权杖边界":"预算审批、人事任命、战略方向、跨部门仲裁",
    "使命与账本":"盈利与现金流；识人用人与团队驾驭力",
    "恐惧清单":"现金流失血、核心人跑路、重大合规爆雷",
    "弦外之音":"'原则上同意'=基本不同意；'你看着办'=出事你扛",
@@ -268,27 +268,27 @@ const TOTAL_CARDS = [
    "资源网络":"上游资方/董事会，平级高管联盟，下游向心力",
    "考核与晋升":"九宫格定位：绩效×潜力；德勇才排序，德第一",
    "红线雷区":"造假、抢功甩锅、越级架空、凌驾业务一票否决"}},
- {id:"total-func",name:"职能长老总卡",sect:"全宗门",hall:"职能堂口",level:"总",
+ {id:"total-func",name:"职能总监总卡",sect:"全公司",hall:"职能部门",level:"总",
   account:"承上启下、执行变现。共性：KPI稳、不添乱。",
   dims:{
-   "身份档案":"中层，业务/职能堂口负责人，向上汇报",
-   "权杖边界":"本口人事建议权、执行决策权，重大事项报宗主",
-   "使命与账本":"把宗主管意图翻译成执行，把执行结果翻成报告",
+   "身份档案":"中层，业务/职能部门负责人，向上汇报",
+   "权杖边界":"本部门人事建议权、执行决策权，重大事项报CEO",
+   "使命与账本":"把CEO意图翻译成执行，把执行结果翻成报告",
    "恐惧清单":"绩效不达标、局面失控、被越级、被甩锅",
    "弦外之音":"'再想想'=不满意；'辛苦了'=客套，别当真",
    "决策风格":"依赖数据+上级意图，需要授权边界清晰",
    "沟通频道":"向上带方案，向下拆任务，平级当翻译器",
-   "资源网络":"上游宗主背书，平级堂口协作，下游队伍执行力",
-   "考核与晋升":"KPI达成+跨口协作评分+培养梯队",
+   "资源网络":"上游CEO背书，平级部门协作，下游队伍执行力",
+   "考核与晋升":"KPI达成+跨部门协作评分+培养梯队",
    "红线雷区":"抢功甩锅、微操养废下属、隐瞒坏消息"}}
 ];
 
 /* 分卡：只存差异（delta），继承父卡 */
 const SUB_CARDS = [
- {id:"sub-fin-mfg",parentId:"total-func",name:"中型制造-财务长老",sect:"中型制造",hall:"财务",level:"长老",
+ {id:"sub-fin-mfg",parentId:"total-func",name:"制造公司-财务总监",sect:"中型制造",hall:"财务",level:"总监",
   account:"管钱不算货。KPI=成本/应收/审计，怕呆坏账。",
   dims:{
-   "身份档案":"职能堂口负责人，直属宗主，管钱不管仓库",
+   "身份档案":"职能部门负责人，直属CEO，管钱不管仓库",
    "权杖边界":"付款审批、预算控制、账务裁决；批不了业务决策",
    "使命与账本":"KPI=利润率、应收周转、审计零事故；账得平、现金流活",
    "恐惧清单":"呆坏账、审计事故、账实不符被查",
@@ -297,10 +297,10 @@ const SUB_CARDS = [
    "沟通频道":"递报表+成本一页纸；先报忧后报喜",
    "考核与晋升":"审计通过率+成本控制达标",
    "红线雷区":"虚报费用、隐瞒坏账"}},
- {id:"sub-mkt-mfg",parentId:"total-func",name:"中型制造-市场长老",sect:"中型制造",hall:"市场",level:"长老",
+ {id:"sub-mkt-mfg",parentId:"total-func",name:"制造公司-市场总监",sect:"中型制造",hall:"市场",level:"总监",
   account:"签单、守客户、防丢失。KPI=销售额/复购。",
   dims:{
-   "身份档案":"利润口负责人，直连客户与渠道",
+   "身份档案":"利润部门负责人，直连客户与渠道",
    "权杖边界":"报价权限、渠道谈判、赠品政策；批不了生产排期",
    "使命与账本":"KPI=销售额、复购率、新客户开拓",
    "恐惧清单":"大客户流失、订单被竞品抢、回款烂账",
@@ -309,10 +309,10 @@ const SUB_CARDS = [
    "沟通频道":"说客户故事，要资源给数字（ROI）",
    "考核与晋升":"业绩达成+客户满意度",
    "红线雷区":"乱承诺交期、低价冲量伤害毛利"}},
- {id:"sub-log-mfg",parentId:"total-func",name:"中型制造-后勤长老",sect:"中型制造",hall:"后勤/仓储",level:"长老",
+ {id:"sub-log-mfg",parentId:"total-func",name:"制造公司-运营总监",sect:"中型制造",hall:"运营/仓储",level:"总监",
   account:"货得发、仓得清、别断供。KPI=时效/库存。",
   dims:{
-   "身份档案":"执行口负责人，管仓管车队发货退货",
+   "身份档案":"执行部门负责人，管仓管车队发货退货",
    "权杖边界":"仓储排班、发货调度、库存管理；批不了采购预算",
    "使命与账本":"KPI=发货准时率、库存周转、退货处理时效",
    "恐惧清单":"断供、爆仓、错发漏发被客户投诉",
@@ -321,10 +321,10 @@ const SUB_CARDS = [
    "沟通频道":"报进度报风险，要支持讲影响",
    "考核与晋升":"准时率+差错率双指标",
    "红线雷区":"隐瞒库存差异、压单不报"}},
- {id:"sub-des-mfg",parentId:"total-func",name:"中型制造-设计长老",sect:"中型制造",hall:"设计/研发",level:"长老",
+ {id:"sub-des-mfg",parentId:"total-func",name:"制造公司-设计总监",sect:"中型制造",hall:"设计/研发",level:"总监",
   account:"图对、样合格、别返工。KPI=图纸一次通过率。",
   dims:{
-   "身份档案":"技术口负责人，管设计团队与样品",
+   "身份档案":"技术部门负责人，管设计团队与样品",
    "权杖边界":"技术方案、图纸审核、样品判定；批不了量产预算",
    "使命与账本":"KPI=一次通过率、按时出图、缺陷率",
    "恐惧清单":"返工、设计缺陷上量后被追责",
@@ -333,7 +333,7 @@ const SUB_CARDS = [
    "沟通频道":"讲技术原因要讲人话，别甩术语",
    "考核与晋升":"一次通过率+项目按时率",
    "红线雷区":"隐瞒设计缺陷、甩锅工艺"}},
- {id:"sub-pro-mfg",parentId:"total-func",name:"中型制造-生产长老",sect:"中型制造",hall:"生产",level:"长老",
+ {id:"sub-pro-mfg",parentId:"total-func",name:"制造公司-生产总监",sect:"中型制造",hall:"生产",level:"总监",
   account:"线得开、良率保、别停线。KPI=良率/产能。",
   dims:{
    "身份档案":"产线负责人，管工人工序排期",
@@ -349,22 +349,22 @@ const SUB_CARDS = [
 
 /* 实例卡：只存补丁，继承分卡 */
 const INSTANCE_CARDS = [
- {id:"ins-lixx",parentId:"sub-log-mfg",name:"李XX(实际)",sect:"中型制造",hall:"后勤/退货组",level:"主管",
+ {id:"ins-lixx",parentId:"sub-log-mfg",name:"李XX(实际)",sect:"中型制造",hall:"运营/退货组",level:"主管",
   account:"退货组主管，月均507笔，错误率≤0.5%，5个Python工具，独立写SOP 173行。",
   patches:{
-   "身份档案":"2人退货组主管(带1人)，直属后勤长老",
+   "身份档案":"2人退货组主管(带1人)，直属运营总监",
    "使命与账本":"退货全流程管理+流程优化+数据报表；KPI=错误率≤0.5%",
    "恐惧清单":"数据口径打架、被追第三层答不出、跨部门推不动",
    "弦外之音":"警惕'AI写的代码'被误读为'没本事'；空白期30个月要正面回答",
    "决策风格":"实操先行，先做能做的，时间线拆解法",
    "沟通频道":"数据说话(507笔/173行/2天)；主动认错纠口径",
    "红线雷区":"绝不做阿酥式包装；诚实是护城河"}},
- {id:"ins-zhangfin",parentId:"sub-fin-mfg",name:"张财务(实际)",sect:"中型制造",hall:"财务",level:"长老",
+ {id:"ins-zhangfin",parentId:"sub-fin-mfg",name:"张财务(实际)",sect:"中型制造",hall:"财务",level:"总监",
   account:"付款审批、预算控制，怕呆坏账和账实不符。",
   patches:{
    "弦外之音":"他说'再想想'=不同意(会议室皱眉那次)",
    "沟通频道":"特批前先备齐单据，别拿口头承诺"}},
- {id:"ins-wlmaster",parentId:"sub-log-mfg",name:"王主管(实际)",sect:"中型制造",hall:"后勤/仓储",level:"长老",
+ {id:"ins-wlmaster",parentId:"sub-log-mfg",name:"王主管(实际)",sect:"中型制造",hall:"运营/仓储",level:"总监",
   account:"管仓发货，怕断供爆仓。",
   patches:{
    "恐惧清单":"退货组数据出错会连带他背锅",
@@ -415,7 +415,7 @@ function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,
 function matchesKw(c,kw){ return [c.name,c.sect,c.hall,c.level,c.account].join(" ").toLowerCase().includes(kw); }
 
 /* ================= 状态 ================= */
-let currentId=null;      // 当前聚焦卡 id（null=宗门总卡根层）；列表 = 它的直接子卡
+let currentId=null;      // 当前聚焦卡 id（null=公司总卡根层）；列表 = 它的直接子卡
 let searchKw="";
 let editingId=null;
 let openCardId=null;
@@ -487,7 +487,7 @@ function renderTree(){
 function renderCrumbs(){
   const el=document.getElementById("crumbs");
   if(searchKw){ el.innerHTML='<span class="crumb current">🔍 搜索结果（全局）</span>'; return; }
-  let h='<span class="crumb'+(currentId?"":" current")+'" onclick="clickCard(null)">🏯 宗门总卡</span>';
+  let h='<span class="crumb'+(currentId?"":" current")+'" onclick="clickCard(null)">🏢 公司总卡</span>';
   if(currentId){
     chainOf(findCard(currentId)).forEach((c,i,arr)=>{
       h+='<span class="crumb arrow">›</span>';
@@ -518,7 +518,7 @@ function cardHTML(c){
       <span>${esc(c.sect||"")}</span>${c.hall?`<span>· ${esc(c.hall)}</span>`:""}${c.level?`<span>· ${esc(c.level)}</span>`:""}
     </div>
     <div class="caccount">${esc(c.account||"")}</div>
-    ${chain?`<div class="cpath">路径：<b>${esc(chain)}</b></div>`:(k!=="total"?"":'<div class="cpath">根卡 · 宗门级共性</div>')}
+    ${chain?`<div class="cpath">路径：<b>${esc(chain)}</b></div>`:(k!=="total"?"":'<div class="cpath">根卡 · 公司级共性</div>')}
     ${own?`<div class="chits">${own}</div>`:""}
     <div class="cops">
       <button onclick="event.stopPropagation();openDrawer('${c.id}')">📄 详情</button>
