@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>角色卡系统 v1.3 - 流转链 · 移动端 · IndexedDB</title>
+<title>角色卡系统 v1.3 - 组织图 · 职级 · IndexedDB</title>
+<link rel="stylesheet" href="libs/orgchart.css">
 <style>
 :root{
   --bg:#f6f5f1; --card:#ffffff; --line:#e7e3d8; --ink:#242830; --muted:#7d8494;
@@ -107,28 +108,30 @@ main{padding:14px 18px 26px;max-width:1080px;margin:0 auto;}
 .vtab:hover{color:var(--accent-ink);}
 .vtab.active{background:var(--card);color:var(--accent-ink);font-weight:600;box-shadow:var(--shadow);}
 
-/* ===== 组织结构图（从上到下，按职级分行 + 树对齐） ===== */
+/* ===== 组织结构图（orgchart 库） ===== */
 .orgWrap{overflow-x:auto;padding:2px 2px 14px;}
-.org{position:relative;min-width:560px;padding:24px 16px 30px;}
-.orgGrid{display:grid;gap:46px 8px;align-items:center;justify-content:center;}
-.ocell{display:flex;justify-content:center;}
-.onode{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;cursor:pointer;
-  min-width:172px;max-width:230px;box-shadow:var(--shadow);transition:border-color .15s,transform .12s,box-shadow .15s;z-index:2;}
-.onode:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow-lg);}
-.onode.hit{border-color:var(--green);box-shadow:0 0 0 2px var(--green-soft),var(--shadow);}
-.onode .tag{font-size:10px;}
-.tag.k-lv{background:var(--card);border:1px solid var(--line);color:var(--muted);margin-left:2px;}
-.tag.k-lv.lv-1{background:var(--accent);border-color:var(--accent);color:#fff;}
-.tag.k-lv.lv-2,.tag.k-lv.lv-3{background:var(--yellow-soft);border-color:var(--yellow);color:var(--yellow);}
-.oname{font-size:14.5px;font-weight:700;margin:5px 0 2px;line-height:1.35;}
-.ometa{font-size:11.5px;color:var(--muted);margin-bottom:4px;}
-.oacc{font-size:11.5px;color:var(--ink);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:.85;}
-.ohit{font-size:10.5px;color:var(--green);font-weight:600;margin-top:4px;}
-.onode.k-root{border-width:2px;border-color:var(--accent);background:var(--accent-soft);}
+#orgBody{min-height:420px;overflow:auto;}
 .orgbar{display:flex;align-items:center;gap:12px;margin:4px 0 14px;flex-wrap:wrap;}
 .orgbar label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;}
 .orgbar select{padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:13.5px;min-height:40px;}
 .orgbar select:focus{outline:none;border-color:var(--accent);}
+/* 节点卡片（orgchart 库 .node 内直接放我们的模板 HTML） */
+.org-node-card{min-width:150px;max-width:220px;text-align:left;}
+.org-node-top{display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap;}
+.org-node-name{font-size:14px;font-weight:700;color:var(--ink);line-height:1.35;margin-bottom:2px;}
+.org-node-meta{font-size:11.5px;color:var(--muted);margin-bottom:3px;}
+.org-node-acc{font-size:11.5px;color:var(--muted);line-height:1.5;opacity:.9;}
+.orgchart .node.org-hit .org-node-card{border:2px solid var(--green)!important;box-shadow:0 0 0 2px var(--green-soft),var(--shadow)!important;border-radius:12px;}
+.orgchart .node .org-node-card{min-width:150px;max-width:220px;text-align:left;}
+.orgchart{background:transparent!important;}
+.orgchart .node{cursor:pointer;}
+.orgchart .node .title{background:var(--card);border:1px solid var(--line);border-radius:10px 10px 0 0;color:var(--ink);padding:10px 12px 6px;box-shadow:var(--shadow);}
+.orgchart .node .content{background:var(--card);border:1px solid var(--line);border-top:none;border-radius:0 0 10px 10px;color:var(--ink);box-shadow:var(--shadow);padding:2px 10px 10px;}
+.orgchart .lines .downLine{background-color:var(--line);}
+.orgchart .lines .topLine{border-top-color:var(--line);}
+.orgchart .lines .leftLine{border-left-color:var(--line);}
+.orgchart .lines .rightLine{border-right-color:var(--line);}
+.orgchart .toggleBtn{color:var(--muted);}
 
 /* ===== 抽屉 ===== */
 .drawer{position:fixed;top:0;right:-520px;width:500px;max-width:100vw;height:100%;height:100dvh;background:var(--card);
@@ -276,6 +279,7 @@ footer{padding:16px 18px 28px;color:var(--muted);font-size:11.5px;text-align:cen
 </div>
 <input type="file" id="import-file" accept=".json" hidden>
 
+<script src="libs/orgchart.min.js"></script>
 <script>
 'use strict';
 /* ================= 数据模型：三层继承 total > sub > instance ================= */
@@ -493,7 +497,20 @@ function setViewMode(m){
   else renderAll();
 }
 
-/* ================= 组织结构图（从上到下） ================= */
+/* ================= 组织结构图（orgchart 库渲染） ================= */
+let orgChart=null;          // 当前 orgchart 实例
+let orgChartRendered=false; // 是否已渲染过图表
+
+/* 构建嵌套 data：当前公司整棵子树（根+后代），nodeContent 模板用字段 */
+function buildOrgData(id){
+  const c=findCard(id); if(!c) return null;
+  const kids=childrenOf(id);
+  const lv=c.level||(kindOf(c)==="total"?1:kindOf(c)==="sub"?3:6);
+  const nd={ id:c.id, name:c.name, account:c.account||"", hall:c.hall||"", lv:lv, lvName:levelName(lv), type:KIND_LABEL[kindOf(c)], kind:kindOf(c) };
+  if(kids.length){ nd.children=kids.map(k=>buildOrgData(k.id)).filter(Boolean); }
+  return nd;
+}
+let orgNodeTemplate=null;
 function renderOrg(){
   const box=document.getElementById("orgBody");
   const sel=document.getElementById("org-company");
@@ -509,82 +526,62 @@ function renderOrg(){
   if(!totals.some(t=>t.id===orgCompany)) orgCompany=(totals.find(t=>childrenOf(t.id).length)||totals[0]).id;
   sel.innerHTML=totals.map(t=>`<option value="${t.id}"${t.id===orgCompany?" selected":""}>${esc(t.name)}</option>`).join("");
   const root=findCard(orgCompany);
-  const hit=c=>!kw||matchesKw(c,kw);
-  function node(c,extra){
-    const h=hit(c);
-    const lv=c.level||(kindOf(c)==="total"?1:kindOf(c)==="sub"?3:6);
-    return `<div class="onode ${extra||""}${h&&kw?" hit":""}" data-oid="${c.id}" onclick="openDrawer('${c.id}')">
-      <span class="tag k-${kindOf(c)}">${KIND_LABEL[kindOf(c)]}</span>
-      <span class="tag k-lv lv-${lv}">${lv}级</span>
-      <div class="oname">${esc(c.name)}</div>
-      <div class="ometa">${esc(c.hall||"")}${levelName(lv)?(" · "+esc(levelName(lv))):""}${c.sect&&c.sect!=="全公司"?(" · "+esc(c.sect)):""}</div>
-      ${c.account?`<div class="oacc">${esc(c.account.slice(0,44))}${c.account.length>44?"…":""}</div>`:""}
-      ${h&&kw?'<div class="ohit">✓ 命中</div>':''}
-    </div>`;
-  }
-  /* 收集当前公司整棵子树（根+所有后代） */
-  const collect=id=>{
-    const out=[findCard(id)]; 
-    childrenOf(id).forEach(k=>out.push(...collect(k.id)));
-    return out.filter(Boolean);
+  const data=buildOrgData(root.id);
+  const opts={
+    data:data,
+    direction:"t2b",
+    nodeTitle:"name",
+    nodeId:"id",
+    draggable:false,
+    pan:true,
+    zoom:true,
+    nodeTemplate:d=>{
+      const lv=d.lv||1;
+      const cls=["k-total","k-sub","k-instance"][["total","sub","instance"].indexOf(d.kind)]||"";
+      return `<div class="org-node-card" data-id="${esc(d.id)}">
+        <div class="org-node-top">
+          <span class="tag ${cls}">${esc(d.type)}</span>
+          <span class="tag k-lv lv-normal">${esc(d.lvName)}</span>
+        </div>
+        <div class="org-node-name">${esc(d.name)}</div>
+        ${d.hall?`<div class="org-node-meta">${esc(d.hall)}</div>`:""}
+        ${d.account?`<div class="org-node-acc">${esc(d.account)}</div>`:""}
+      </div>`;
+    }
   };
-  const nodes=collect(root.id);
-  /* 树对齐布局：叶子各占1列，父节点占子节点列区间并集 → 子卡落在父卡正下方 */
-  const colOf={}, spanOf={};
-  let leafCount=0;
-  (function layout(id){
-    const kids=childrenOf(id);
-    if(!kids.length){ colOf[id]=leafCount; spanOf[id]=1; leafCount++; return; }
-    let min=Infinity, max=-Infinity;
-    kids.forEach(k=>{ layout(k.id); min=Math.min(min,colOf[k.id]); max=Math.max(max,colOf[k.id]+spanOf[k.id]); });
-    colOf[id]=min; spanOf[id]=max-min;
-  })(root.id);
-  /* 按职级分组：level 1 在最上 */
-  const byLv={};
-  nodes.forEach(c=>{ const lv=c.level||(kindOf(c)==="total"?1:kindOf(c)==="sub"?3:6); (byLv[lv]=byLv[lv]||[]).push(c); });
-  const lvs=Object.keys(byLv).map(Number).sort((a,b)=>a-b);
-  let html=`<div class="org"><div class="orgGrid" style="grid-template-columns:repeat(${Math.max(leafCount,1)},minmax(172px,1fr))">`;
-  const rowOf={};
-  lvs.forEach((lv,ri)=>{ byLv[lv].forEach(c=>{ rowOf[c.id]=ri+1; }); });
-  nodes.forEach(c=>{
-    const col=colOf[c.id]+1, span=Math.max(spanOf[c.id]||1,1), row=rowOf[c.id];
-    html+=`<div class="ocell" style="grid-column:${col} / span ${span};grid-row:${row};justify-self:center;">${node(c,c.id===root.id?"k-root":"")}</div>`;
-  });
-  html+=`</div></div>`;
-  box.innerHTML=html;
-  drawOrgLines();
+  if(!orgChart){
+    orgChart=new OrgChart(box, opts);
+    orgChartRendered=true;
+  } else {
+    orgChart.init(opts);
+  }
+  /* 点击节点 → 十维抽屉；搜索命中高亮 */
+  bindOrgClicks(box, kw);
   if(orgCount){
+    const nodes=collectOrg(root.id);
     orgCount.textContent="共 "+nodes.length+" 张卡";
   }
 }
-/* 用 SVG 画父子连线（父节点底 → 子节点顶） */
-function drawOrgLines(){
-  const org=document.querySelector(".org");
-  if(!org) return;
-  let svg=document.getElementById("org-svg");
-  if(svg) svg.remove();
-  const all=ALL();
-  const W=org.scrollWidth, H=org.scrollHeight;
-  if(!W||!H) return;
-  svg=document.createElementNS?document.createElementNS("http://www.w3.org/2000/svg","svg"):document.createElement("svg");
-  svg.id="org-svg"; svg.setAttribute("width",W); svg.setAttribute("height",H);
-  svg.style.position="absolute"; svg.style.left="0"; svg.style.top="0"; svg.style.pointerEvents="none"; svg.style.zIndex="1";
-  const lineColor=getComputedStyle?getComputedStyle(document.body).getPropertyValue("--line").trim():"#e7e3d8";
-  const elOf=c=>document.querySelector('.onode[data-oid="'+c.id+'"]');
-  let paths="";
-  all.forEach(p=>{
-    const pel=elOf(p); if(!pel) return;
-    const px=pel.offsetLeft+pel.offsetWidth/2, py=pel.offsetTop+pel.offsetHeight;
-    childrenOf(p.id).forEach(k=>{
-      const kel=elOf(k); if(!kel) return;
-      const kx=kel.offsetLeft+kel.offsetWidth/2, ky=kel.offsetTop;
-      if(ky<=py) return;
-      const my=(py+ky)/2;
-      paths+=`<path d="M${px},${py} L${px},${my} L${kx},${my} L${kx},${ky}" fill="none" stroke="${lineColor}" stroke-width="2"/>`;
-    });
+function collectOrg(id){
+  const out=[findCard(id)];
+  childrenOf(id).forEach(k=>out.push(...collectOrg(k.id)));
+  return out.filter(Boolean);
+}
+function bindOrgClicks(box, kw){
+  const nodes=[...box.querySelectorAll(".node")];
+  nodes.forEach(el=>{
+    const cardEl=el.querySelector(".org-node-card");
+    const cardId=cardEl?cardEl.getAttribute("data-id"):el.getAttribute("data-id");
+    el.onclick=ev=>{ 
+      if(ev.target.closest && ev.target.closest(".toggleBtn")) return;
+      ev.stopPropagation(); if(cardId) openDrawer(cardId); 
+    };
+    if(kw){
+      const c=cardId?findCard(cardId):null;
+      const hit=c&&matchesKw(c,kw);
+      el.classList.toggle("org-hit",!!hit);
+    } else el.classList.remove("org-hit");
   });
-  svg.innerHTML=paths||"";
-  org.appendChild(svg);
 }
 function onOrgCompany(id){ orgCompany=id; renderOrg(); }
 
