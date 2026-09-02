@@ -101,6 +101,36 @@ main{padding:14px 18px 26px;max-width:1080px;margin:0 auto;}
 .treeMeta{color:var(--muted);font-size:11.5px;}
 .treeHit{color:var(--green);font-size:11.5px;}
 
+/* ===== 视图切换 tab ===== */
+.viewtabs{display:flex;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:3px;box-shadow:var(--shadow);}
+.vtab{border:none;background:transparent;color:var(--muted);border-radius:9px;padding:8px 13px;font-size:13px;cursor:pointer;min-height:38px;transition:background .15s,color .15s;}
+.vtab:hover{color:var(--accent-ink);}
+.vtab.active{background:var(--card);color:var(--accent-ink);font-weight:600;box-shadow:var(--shadow);}
+
+/* ===== 组织结构图 ===== */
+.orgWrap{overflow-x:auto;padding:2px 2px 14px;}
+.org{display:flex;align-items:flex-start;gap:0;min-width:820px;padding:52px 8px 6px;}
+.olvl{display:flex;flex-direction:column;justify-content:center;gap:16px;padding:0 16px;position:relative;}
+.olvl+.olvl::before{content:'';position:absolute;top:-34px;left:0;right:0;height:2px;background:var(--line);}
+.olvl>.onode::before,.olvl>.ovoid::before{content:'';position:absolute;top:-34px;left:50%;width:2px;height:34px;background:var(--line);}
+.olvl.l1>.onode::before{display:none;}
+.onode{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;cursor:pointer;
+  min-width:182px;max-width:220px;box-shadow:var(--shadow);transition:border-color .15s,transform .12s,box-shadow .15s;}
+.onode:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow-lg);}
+.onode.hit{border-color:var(--green);box-shadow:0 0 0 2px var(--green-soft),var(--shadow);}
+.onode .tag{font-size:10px;}
+.oname{font-size:14.5px;font-weight:700;margin:5px 0 2px;line-height:1.35;}
+.ometa{font-size:11.5px;color:var(--muted);margin-bottom:4px;}
+.oacc{font-size:11.5px;color:var(--ink);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:.85;}
+.ohit{font-size:10.5px;color:var(--green);font-weight:600;margin-top:4px;}
+.onode.k-root{border-width:2px;border-color:var(--accent);background:var(--accent-soft);}
+.ovoid{position:relative;border:1px dashed var(--line);border-radius:10px;padding:12px 14px;min-width:182px;text-align:center;
+  color:var(--muted);font-size:12px;background:transparent;}
+.orgbar{display:flex;align-items:center;gap:12px;margin:4px 0 14px;flex-wrap:wrap;}
+.orgbar label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;}
+.orgbar select{padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:13.5px;min-height:40px;}
+.orgbar select:focus{outline:none;border-color:var(--accent);}
+
 /* ===== 抽屉 ===== */
 .drawer{position:fixed;top:0;right:-520px;width:500px;max-width:100vw;height:100%;height:100dvh;background:var(--card);
   border-left:1px solid var(--line);transition:right .26s ease;overflow-y:auto;z-index:60;padding:20px;box-shadow:var(--shadow-lg);}
@@ -178,7 +208,6 @@ footer{padding:16px 18px 28px;color:var(--muted);font-size:11.5px;text-align:cen
     <small>总卡 → 分卡 → 实例卡 · 三层继承 · 点卡片向下钻 · 点面包屑向上回</small>
   </div>
   <div class="tools">
-    <button class="tbtn" id="btn-tree" onclick="setViewMode('tree')">🌳 总览</button>
     <button class="tbtn primary" onclick="openNewFromCurrent()">＋ 新建卡片</button>
     <button class="tbtn" id="btn-theme" onclick="toggleTheme()">🌙</button>
     <button class="tbtn" onclick="exportJSON()">⭳ 导出</button>
@@ -192,11 +221,23 @@ footer{padding:16px 18px 28px;color:var(--muted);font-size:11.5px;text-align:cen
 
 <main>
   <div class="searchRow">
+    <div class="viewtabs">
+      <button class="vtab active" data-v="org" onclick="setViewMode('org')">🏢 组织</button>
+      <button class="vtab" data-v="drill" onclick="setViewMode('drill')">📁 层级</button>
+      <button class="vtab" data-v="tree" onclick="setViewMode('tree')">🌳 树</button>
+    </div>
     <input type="search" id="f-search" placeholder="🔍 搜名称 / 行业 / 部门 / 职级 / 摘要…">
     <span class="count" id="f-count"></span>
   </div>
   <div class="tip" id="f-tip">💡 点卡片 = 钻到它的下一级；点「↑ 父卡」或面包屑 = 向上回流；「📄 详情」看全部 10 维定义。</div>
-  <div class="list" id="list"></div>
+  <div class="orgWrap" id="orgWrap">
+    <div class="orgbar">
+      <label>公司：<select id="org-company" onchange="onOrgCompany(this.value)"></select></label>
+      <span class="count" id="org-count"></span>
+    </div>
+    <div id="orgBody"></div>
+  </div>
+  <div class="list" id="list" style="display:none"></div>
   <div class="treeView" id="treeView" style="display:none"></div>
 </main>
 
@@ -422,28 +463,71 @@ let openCardId=null;
 
 function setSearch(v){ searchKw=v.trim(); closeDrawer(); renderAll(); }
 
-/* ================= 视图模式：drill(层级下钻) / tree(全局树状) ================= */
-let viewMode="drill";
+/* ================= 视图模式：org(组织结构图·主界面) / drill(层级下钻) / tree(树状总览) ================= */
+let viewMode="org";
+let orgCompany=null;    // 组织图当前聚焦的公司（total 卡 id）
 function setViewMode(m){
   viewMode=m;
-  const btn=document.getElementById("btn-tree");
-  btn.textContent=m==="tree"?"🔙 返回流转":"🌳 总览";
   const list=document.getElementById("list");
   const tree=document.getElementById("treeView");
+  const org=document.getElementById("orgWrap");
   const crumbbox=document.querySelector(".crumbbox");
   const tip=document.getElementById("f-tip");
-  if(m==="tree"){
-    list.style.display="none"; tree.style.display="block";
-    if(crumbbox) crumbbox.style.display="none";
-    if(tip) tip.style.display="none";
-    renderTree();
-  } else {
-    list.style.display=""; tree.style.display="none";
-    if(crumbbox) crumbbox.style.display="";
-    if(tip) tip.style.display="";
-    renderAll();
+  list.style.display=(m==="drill")?"":"none";
+  tree.style.display=(m==="tree")?"":"none";
+  org.style.display=(m==="org")?"":"none";
+  if(crumbbox) crumbbox.style.display=(m==="drill")?"":"none";
+  if(tip) tip.style.display=(m==="drill")?"":"none";
+  document.querySelectorAll(".vtab").forEach(b=>b.classList.toggle("active",b.dataset.v===m));
+  if(m==="org") renderOrg();
+  else if(m==="tree") renderTree();
+  else renderAll();
+}
+
+/* ================= 组织结构图 ================= */
+function renderOrg(){
+  const box=document.getElementById("orgBody");
+  const sel=document.getElementById("org-company");
+  const kw=searchKw.toLowerCase();
+  const totals=ALL().filter(c=>kindOf(c)==="total");
+  const orgCount=document.getElementById("org-count");
+  if(!totals.length){
+    sel.innerHTML='';
+    box.innerHTML='<div class="empty">还没有总卡。先新建一张公司总卡，组织图才能长出结构。<br><span class="big">🏢</span><br><button class="mbtn primary" onclick="openNewFromCurrent()">＋ 新建总卡</button></div>';
+    if(orgCount) orgCount.textContent="";
+    return;
+  }
+  if(!totals.some(t=>t.id===orgCompany)) orgCompany=(totals.find(t=>childrenOf(t.id).length)||totals[0]).id;
+  sel.innerHTML=totals.map(t=>`<option value="${t.id}"${t.id===orgCompany?" selected":""}>${esc(t.name)}</option>`).join("");
+  const root=findCard(orgCompany);
+  const hit=c=>!kw||matchesKw(c,kw);
+  function node(c,extra){
+    const h=hit(c);
+    return `<div class="onode ${extra||""}${h&&kw?" hit":""}" onclick="openDrawer('${c.id}')">
+      <span class="tag k-${kindOf(c)}">${KIND_LABEL[kindOf(c)]}</span>
+      <div class="oname">${esc(c.name)}</div>
+      <div class="ometa">${esc(c.hall||"")}${c.level?(" · "+esc(c.level)):""}${c.sect&&c.sect!=="全公司"?(" · "+esc(c.sect)):""}</div>
+      ${c.account?`<div class="oacc">${esc(c.account.slice(0,44))}${c.account.length>44?"…":""}</div>`:""}
+      ${h&&kw?'<div class="ohit">✓ 命中</div>':''}
+    </div>`;
+  }
+  const voidN=()=>'<div class="ovoid">— 暂无下属<br><span style="font-size:10.5px">可新建下级</span></div>';
+  const l2=childrenOf(root.id);
+  let html=`<div class="org">
+    <div class="olvl l1">${node(root,"k-root")}</div>
+    <div class="olvl l2">${l2.length?l2.map(c=>node(c)).join(""):voidN()}</div>
+    <div class="olvl l3">${l2.length?l2.map(c=>{
+      const kids=childrenOf(c.id);
+      return kids.length?kids.map(k=>node(k)).join(""):voidN();
+    }).join(""):""}</div>
+  </div>`;
+  box.innerHTML=html;
+  if(orgCount){
+    const total=1+l2.length+l2.reduce((n,c)=>n+childrenOf(c.id).length,0);
+    orgCount.textContent="共 "+total+" 张卡";
   }
 }
+function onOrgCompany(id){ orgCompany=id; renderOrg(); }
 
 /* ================= 树状全局总览 ================= */
 function renderTree(){
@@ -553,6 +637,7 @@ function clickCard(id){
 
 /* ================= 渲染入口 ================= */
 function renderAll(){
+  if(viewMode==="org"){ renderOrg(); return; }
   if(viewMode==="tree"){ renderTree(); return; }
   renderCrumbs(); renderList();
 }
@@ -835,7 +920,7 @@ async function initApp(){
   applyTheme(t);
   if(!d && db) persist();           // 首启：种子数据落库
   else if(d && !db && !lsRead(STORE)) persist(); // 迁移后确保新库有副本（降级路径本身已存 LS）
-  renderAll();
+  setViewMode(viewMode);
 }
 
 document.getElementById("f-search").addEventListener("input",e=>setSearch(e.target.value));
