@@ -156,7 +156,8 @@ main{padding:14px 18px 26px;max-width:1080px;margin:0 auto;}
 .mbtn:active{transform:scale(.97);}
 
 /* ===== 组织结构图（纯 CSS+JS 无限画布） ===== */
-.orgCanvas{position:relative;overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:var(--shadow);min-height:480px;max-height:78vh;}
+.orgCanvas{position:relative;overflow:hidden;background:var(--card);min-height:480px;max-height:78vh;cursor:grab;user-select:none;}
+.orgCanvas.dragging{cursor:grabbing;}
 .orgCanvas .orgLines{position:absolute;top:0;left:0;pointer-events:none;z-index:0;}
 .orgNode{position:absolute;border:2px solid var(--line);border-radius:12px;background:var(--card);padding:10px 13px;cursor:pointer;z-index:2;
   box-shadow:var(--shadow);transition:border-color .15s,box-shadow .15s;min-width:160px;max-width:200px;}
@@ -483,6 +484,7 @@ function setViewMode(m){
 
 /* ================= 组织结构图（纯 CSS+JS，无限画布，自动布局） ================= */
 let orgCompany=null;
+let orgTx=0,orgTy=0,orgScale=1;
 const ORG_CW=180, ORG_CH=80, ORG_HGAP=28, ORG_VGAP=56, ORG_PAD=40;
 /* 递归计算子树宽度 */
 function orgCalcW(id){
@@ -522,7 +524,7 @@ function renderOrg(){
   box.innerHTML="";
   /* 公司选择器（固定在画布顶部） */
   const bar=document.createElement("div");
-  bar.style.cssText="position:sticky;top:0;z-index:10;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line);border-radius:14px 14px 0 0;";
+  bar.style.cssText="position:absolute;top:0;left:0;right:0;z-index:10;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line);";
   const label=document.createElement("label");
   label.style.cssText="font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;";
   label.textContent="公司：";
@@ -539,14 +541,18 @@ function renderOrg(){
   label.appendChild(sel);
   bar.appendChild(label);
   box.appendChild(bar);
-  box.style.width=Math.max(totalW,box.clientWidth)+"px";
-  box.style.height=Math.max(maxY+36,480)+"px";
+  /* 可拖拽内容容器 */
+  const content=document.createElement("div");
+  content.style.cssText="position:absolute;left:0;top:36px;transform:translate(0,0);transition:none;";
+  box.appendChild(content);
+  content.style.width=totalW+"px";
+  content.style.height=maxY+"px";
   /* SVG 连线层 */
   const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
   svg.setAttribute("class","orgLines");
   svg.setAttribute("width",totalW);
   svg.setAttribute("height",maxY);
-  box.appendChild(svg);
+  content.appendChild(svg);
   const lineColor=getComputedStyle(document.body).getPropertyValue("--line").trim()||"#e7e3d8";
   /* 渲染节点 */
   nodes.forEach(n=>{
@@ -559,7 +565,7 @@ function renderOrg(){
     el.setAttribute("data-id",c.id);
     el.onclick=()=>openDrawer(c.id);
     el.innerHTML=`<div class="orgLv">L${lv}</div><div class="orgName">${esc(c.name)}</div><div class="orgMeta">${esc(c.hall||"")}${c.sect&&c.sect!=="全公司"?(" · "+esc(c.sect)):""}</div>`;
-    box.appendChild(el);
+    content.appendChild(el);
     /* 画到子节点的连线 */
     childrenOf(c.id).forEach(k=>{
       const kn=nodes.find(n=>n.id===k.id);
@@ -587,8 +593,42 @@ function renderOrg(){
   const orgCount=nodes.length;
   document.getElementById("f-count").textContent="共 "+orgCount+" 张";
   box.scrollTop=0; box.scrollLeft=0;
+  /* 拖拽平移 */
+  orgDragInit(box,content);
 }
-function onOrgCompany(id){ orgCompany=id; renderOrg(); }
+function orgDragInit(box,content){
+  let dragging=false,startX=0,startY=0;
+  box.onmousedown=e=>{
+    if(e.target.closest("select")||e.target.closest("button")) return;
+    dragging=true; startX=e.clientX; startY=e.clientY;
+    box.classList.add("dragging");
+  };
+  window.addEventListener("mousemove",e=>{
+    if(!dragging) return;
+    const dx=e.clientX-startX, dy=e.clientY-startY;
+    content.style.transform=`translate(${orgTx+dx}px,${orgTy+dy}px) scale(${orgScale})`;
+  });
+  window.addEventListener("mouseup",e=>{
+    if(!dragging) return;
+    orgTx+=e.clientX-startX; orgTy+=e.clientY-startY;
+    dragging=false; box.classList.remove("dragging");
+  });
+  /* 鼠标滚轮 = 缩放 */
+  box.onwheel=e=>{
+    e.preventDefault();
+    const delta=e.deltaY>0?-0.08:0.08;
+    orgScale=Math.min(Math.max(orgScale+delta,0.3),3);
+    content.style.transform=`translate(${orgTx}px,${orgTy}px) scale(${orgScale})`;
+    content.style.transformOrigin="0 0";
+  };
+  /* 初始居中 */
+  const cw=box.clientWidth, ch=box.clientHeight;
+  const pw=parseFloat(content.style.width)||0, ph=parseFloat(content.style.height)||0;
+  orgTx=Math.max(0,(cw-pw)/2);
+  orgTy=10;
+  content.style.transform=`translate(${orgTx}px,${orgTy}px)`;
+}
+function onOrgCompany(id){ orgCompany=id; orgTx=0;orgTy=0;orgScale=1; renderOrg(); }
 
 /* ================= 树状全局总览（按职级层级，可折叠） ================= */
 let treeExpanded=new Set(); // 展开状态（存 card id）
