@@ -107,12 +107,13 @@ main{padding:14px 18px 26px;max-width:1080px;margin:0 auto;}
 .vtab:hover{color:var(--accent-ink);}
 .vtab.active{background:var(--card);color:var(--accent-ink);font-weight:600;box-shadow:var(--shadow);}
 
-/* ===== 组织结构图（从上到下，按职级分行） ===== */
+/* ===== 组织结构图（从上到下，按职级分行 + 树对齐） ===== */
 .orgWrap{overflow-x:auto;padding:2px 2px 14px;}
-.org{position:relative;display:flex;flex-direction:column;align-items:center;gap:0;min-width:560px;padding:24px 16px 30px;}
-.orow{position:relative;display:flex;justify-content:center;align-items:flex-start;gap:18px;padding:34px 0 4px;flex-wrap:wrap;}
+.org{position:relative;min-width:560px;padding:24px 16px 30px;}
+.orgGrid{display:grid;gap:46px 8px;align-items:center;justify-content:center;}
+.ocell{display:flex;justify-content:center;}
 .onode{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;cursor:pointer;
-  min-width:176px;max-width:230px;box-shadow:var(--shadow);transition:border-color .15s,transform .12s,box-shadow .15s;z-index:2;}
+  min-width:172px;max-width:230px;box-shadow:var(--shadow);transition:border-color .15s,transform .12s,box-shadow .15s;z-index:2;}
 .onode:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow-lg);}
 .onode.hit{border-color:var(--green);box-shadow:0 0 0 2px var(--green-soft),var(--shadow);}
 .onode .tag{font-size:10px;}
@@ -409,7 +410,13 @@ const INSTANCE_CARDS = [
   account:"管仓发货，怕断供爆仓。",
   patches:{
    "恐惧清单":"退货组数据出错会连带他背锅",
-   "弦外之音":"'尽量明天发'=明天必须发，别试探"}}
+   "弦外之音":"'尽量明天发'=明天必须发，别试探"}},
+ {id:"ins-cashier",parentId:"sub-fin-mfg",name:"普通财务(员工)",sect:"中型制造",hall:"财务",level:7,
+  account:"日常记账、报销初审、对账。怕错账背锅、被审计抽中。",
+  patches:{
+   "身份档案":"财务部基层会计，向财务总监汇报",
+   "恐惧清单":"账不平、报销单被退、审计抽到自己头上",
+   "沟通频道":"单据按流程走，先自查再上报"}}
 ];
 
 /* ================= 解析引擎 ================= */
@@ -522,17 +529,28 @@ function renderOrg(){
     return out.filter(Boolean);
   };
   const nodes=collect(root.id);
+  /* 树对齐布局：叶子各占1列，父节点占子节点列区间并集 → 子卡落在父卡正下方 */
+  const colOf={}, spanOf={};
+  let leafCount=0;
+  (function layout(id){
+    const kids=childrenOf(id);
+    if(!kids.length){ colOf[id]=leafCount; spanOf[id]=1; leafCount++; return; }
+    let min=Infinity, max=-Infinity;
+    kids.forEach(k=>{ layout(k.id); min=Math.min(min,colOf[k.id]); max=Math.max(max,colOf[k.id]+spanOf[k.id]); });
+    colOf[id]=min; spanOf[id]=max-min;
+  })(root.id);
   /* 按职级分组：level 1 在最上 */
   const byLv={};
   nodes.forEach(c=>{ const lv=c.level||(kindOf(c)==="total"?1:kindOf(c)==="sub"?3:6); (byLv[lv]=byLv[lv]||[]).push(c); });
   const lvs=Object.keys(byLv).map(Number).sort((a,b)=>a-b);
-  let html=`<div class="org">`;
-  lvs.forEach(lv=>{
-    html+=`<div class="orow" data-lv="${lv}">`;
-    byLv[lv].forEach(c=>{ html+=node(c,c.id===root.id?"k-root":""); });
-    html+=`</div>`;
+  let html=`<div class="org"><div class="orgGrid" style="grid-template-columns:repeat(${Math.max(leafCount,1)},minmax(172px,1fr))">`;
+  const rowOf={};
+  lvs.forEach((lv,ri)=>{ byLv[lv].forEach(c=>{ rowOf[c.id]=ri+1; }); });
+  nodes.forEach(c=>{
+    const col=colOf[c.id]+1, span=Math.max(spanOf[c.id]||1,1), row=rowOf[c.id];
+    html+=`<div class="ocell" style="grid-column:${col} / span ${span};grid-row:${row};justify-self:center;">${node(c,c.id===root.id?"k-root":"")}</div>`;
   });
-  html+=`</div>`;
+  html+=`</div></div>`;
   box.innerHTML=html;
   drawOrgLines();
   if(orgCount){
