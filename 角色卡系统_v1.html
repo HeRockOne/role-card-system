@@ -532,7 +532,7 @@ function childrenOfLocal(id){ return ALL().filter(c=>c.parentId===id); }
 function renderCrumbs(){
   const el=document.getElementById("crumbs");
   if(searchKw){ el.innerHTML='<span class="crumb current">🔍 搜索结果（全局）</span>'; return; }
-  let h='<span class="crumb'+(currentId?"":" current")+'" onclick="clickCard(null)">🏢 公司总卡</span>';
+  let h='<span class="crumb'+(currentId?"":" current")+'" onclick="clickCard(null)">根</span>';
   if(currentId){
     chainOf(findCard(currentId)).forEach((c,i,arr)=>{
       h+='<span class="crumb arrow">›</span>';
@@ -657,12 +657,13 @@ function onKindChange(){
   const kind=document.getElementById("f-kind").value;
   const sel=document.getElementById("f-parent");
   sel.innerHTML='<option value="">无</option>';
-  const list=kind==="sub"?TOTAL_CARDS:kind==="instance"?SUB_CARDS:[];
-  list.forEach(c=>{ const o=document.createElement("option"); o.value=c.id; o.text="["+KIND_LABEL[kindOf(c)]+"] "+c.name; sel.appendChild(o); });
+  /* 按职级数字过滤：所有 level < 当前 level 的卡都能选为父卡（不限类型） */
+  const curLv=Number(document.getElementById("f-level")?.value)||1;
+  const list=ALL().filter(c=>(c.level||0)<curLv && (kind!=="total"||c.id!==editingId));
+  list.forEach(c=>{ const o=document.createElement("option"); o.value=c.id; o.text="[L"+(c.level||"?")+"·"+esc(c.name)+"]"; sel.appendChild(o); });
   document.getElementById("f-parenthint").textContent=
     kind==="total"?"总卡为独立卡，无父卡（它就是一家公司）":
-    kind==="sub"?"父卡（继承源）：总卡 —— 分卡只写与总卡不同的差异":
-    "父卡（继承源）：分卡 —— 实例卡只写这个人的个人补丁";
+    "上级卡（按职级数字选择，所有 level < 本卡 level 的卡都可以作为上级）";
   /* 职级联动：总卡锁定 1 级 */
   const lvSel=document.getElementById("f-level");
   lvSel.innerHTML="";
@@ -775,7 +776,7 @@ function createCard(){
   const level=Number(document.getElementById("f-level").value)||1;
   const account=document.getElementById("f-account").value.trim();
   if(!name){ alert("名称必填"); return; }
-  if(kind!=="total" && !parent){ alert("分卡/实例卡必须选择父卡（继承源）"); return; }
+  if(kind!=="total" && !parent){ alert("必须选择上级卡"); return; }
   const card={id:"card-"+Date.now().toString(36),name,sect,hall,level,account,version:1,kind};
   if(kind!=="total") card.parentId=parent;
   if(kind==="instance") card.patches=collectDims(); else card.dims=collectDims();
