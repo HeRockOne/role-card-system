@@ -490,7 +490,6 @@ function renderTree(){
     const arrowCls=hasKids?"toggle-arrow":"leaf-dot";
     let h=`<div class="treeRow" data-id="${esc(c.id)}" style="padding-left:${depth*24}px" onclick="toggleTreeNode('${c.id}')">
       <span class="treeLine ${arrowCls}">${arrow}</span>
-      <span class="tag k-${kindOf(c)}">${KIND_LABEL[kindOf(c)]}</span>
       <span class="tag k-lv">${lv}级</span>
       <span class="treeName">${esc(c.name)}</span>
       <span class="treeMeta">${esc(c.hall||"")}${c.sect&&c.sect!=="全公司"?(" · "+esc(c.sect)):""}</span>
