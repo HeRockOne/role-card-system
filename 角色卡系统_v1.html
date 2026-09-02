@@ -408,14 +408,19 @@ const INSTANCE_CARDS = [
    "沟通频道":"单据按流程走，先自查再上报"}}
 ];
 
+/* ================= 统一数据源：单一 cards 数组（类型不再存储，由 patches/level 推导） ================= */
+let CARDS=[...TOTAL_CARDS,...SUB_CARDS,...INSTANCE_CARDS];
+
 /* ================= 解析引擎 ================= */
 function findCard(id){
-  for(const c of [...TOTAL_CARDS,...SUB_CARDS,...INSTANCE_CARDS]) if(c.id===id) return c;
+  for(const c of CARDS) if(c.id===id) return c;
   return null;
 }
+/* 类型推导：有 patches=个人卡(实例)；level 1=总卡(老板)；其余=岗位卡(分卡) */
 function kindOf(card){
   if(card.kind) return card.kind;
-  return card.id.startsWith("total")?"total":(card.id.startsWith("sub")?"sub":"instance");
+  if(card.patches) return "instance";
+  return card.level===1?"total":"sub";
 }
 function resolveCard(card){
   const out={}; let cur=card; const chain=[];
@@ -448,7 +453,7 @@ function levelName(lv){ const n=LEVEL_NAMES[Number(lv)]; return n?(""+lv+"级·"
 const SRC_CLASS={inherit:"src-inherit",total:"src-total",sub:"src-override",patch:"src-patch"};
 const SRC_LABEL={inherit:"继承(未定义)",total:"总卡共性",sub:"分卡定义",patch:"个人补丁"};
 const SRC_TIP={inherit:"整条链都没定义，显示占位",total:"跨行业共性，由总卡定义",sub:"该分卡的特殊定义（差异下沉）",patch:"实例卡的个人补丁（只归本人）"};
-const ALL=()=>[...TOTAL_CARDS,...SUB_CARDS,...INSTANCE_CARDS];
+const ALL=()=>[...CARDS];
 const childrenOf=id=>ALL().filter(c=>c.parentId===id);
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function matchesKw(c,kw){ return [c.name,c.sect,c.hall,c.level,c.account].join(" ").toLowerCase().includes(kw); }
@@ -808,8 +813,7 @@ function deleteCard(id){
     return;
   }
   if(!confirm(`确定删除「${card.name}」？该操作不可撤销。`)) return;
-  const arr=(k=>k==="total"?TOTAL_CARDS:k==="sub"?SUB_CARDS:INSTANCE_CARDS)(kindOf(card));
-  const i=arr.findIndex(c=>c.id===id); if(i>=0) arr.splice(i,1);
+  const i=CARDS.findIndex(c=>c.id===id); if(i>=0) CARDS.splice(i,1);
   if(currentId===id) currentId=card.parentId||null;
   closeDrawer(); persist(); renderAll();
 }
@@ -943,10 +947,10 @@ function createCard(){
   const account=document.getElementById("f-account").value.trim();
   if(!name){ alert("名称必填"); return; }
   if(kind!=="total" && !parent){ alert("必须选择上级卡"); return; }
-  const card={id:"card-"+Date.now().toString(36),name,sect,hall,level,account,version:1,kind};
+  const card={id:"card-"+Date.now().toString(36),name,sect,hall,level,account};
   if(kind!=="total") card.parentId=parent;
   if(kind==="instance") card.patches=collectDims(); else card.dims=collectDims();
-  (kind==="total"?TOTAL_CARDS:kind==="sub"?SUB_CARDS:INSTANCE_CARDS).push(card);
+  CARDS.push(card);
   closeModal();
   if(currentId===parent) { /* 留在当前层，新卡会出现在列表 */ }
   persist(); renderAll(); openDrawer(card.id);
@@ -961,7 +965,7 @@ function saveEdit(){
   const level=Number(document.getElementById("f-level").value)||1;
   const account=document.getElementById("f-account").value.trim();
   if(!name){ alert("名称必填"); return; }
-  if(k!=="total" && !parent){ alert("分卡/实例卡必须选择父卡（继承源）"); return; }
+  if(k!=="total" && !parent){ alert("必须选择上级卡"); return; }
   card.name=name; card.sect=sect; card.hall=hall; card.level=level; card.account=account;
   card.parentId=(k==="total")?undefined:parent;
   const tgt=(k==="instance")?(card.patches=card.patches||{}):(card.dims=card.dims||{});
@@ -975,7 +979,7 @@ function saveEdit(){
 
 /* ================= 导出 / 导入 JSON ================= */
 function exportJSON(){
-  const data={version:"1.3",savedAt:new Date().toISOString(),total:TOTAL_CARDS,sub:SUB_CARDS,instance:INSTANCE_CARDS};
+  const data={version:"1.4",savedAt:new Date().toISOString(),cards:CARDS.map(c=>({...c}))};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="角色卡数据.json"; a.click();
 }
@@ -1004,7 +1008,7 @@ function toggleTheme(){
 }
 
 /* ================= 存储：IndexedDB（降级 localStorage + 旧版迁移） ================= */
-const STORE="rcs_cards_v13";
+const STORE="rcs_cards_v14";
 let db=null;
 let storeBadge;
 function idbOpen(){
@@ -1032,7 +1036,7 @@ function idbGet(key){
     rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error||new Error("get-err"));
   });
 }
-function payload(){ return {version:"1.3",savedAt:Date.now(),total:TOTAL_CARDS,sub:SUB_CARDS,instance:INSTANCE_CARDS}; }
+function payload(){ return {version:"1.4",savedAt:Date.now(),cards:CARDS.map(c=>({...c}))}; }
 let persistQ=Promise.resolve();
 function persist(){
   const p=payload();
@@ -1042,19 +1046,26 @@ function persist(){
   });
   return persistQ;
 }
+/* 注入数据：兼容新格式 {cards} 与旧格式 {total,sub,instance} */
 function injectData(d){
-  TOTAL_CARDS.length=0; SUB_CARDS.length=0; INSTANCE_CARDS.length=0;
-  (d.total||[]).forEach(c=>TOTAL_CARDS.push(c));
-  (d.sub||[]).forEach(c=>SUB_CARDS.push(c));
-  (d.instance||[]).forEach(c=>INSTANCE_CARDS.push(c));
+  if(!d) return;
+  CARDS.length=0;
+  if(Array.isArray(d.cards)){
+    d.cards.forEach(c=>CARDS.push(c));
+  } else {
+    (d.total||[]).forEach(c=>CARDS.push(c));
+    (d.sub||[]).forEach(c=>CARDS.push(c));
+    (d.instance||[]).forEach(c=>CARDS.push(c));
+  }
 }
 function lsRead(key){ try{ const v=localStorage.getItem(key); return v?JSON.parse(v):null; }catch(e){ return null; } }
 async function loadData(){
   if(db){
-    try{ const v=await idbGet(STORE); if(v&&v.total) return v; }catch(e){}
+    try{ const v=await idbGet(STORE); if(v&&(v.cards||v.total)) return v; }catch(e){}
   }
-  const v=lsRead(STORE); if(v&&v.total) return v;
-  const old=lsRead("rcs_v1"); if(old&&old.total) return old;   // v1.2 迁移
+  const v=lsRead(STORE); if(v&&(v.cards||v.total)) return v;
+  const old=lsRead("rcs_cards_v13"); if(old&&(old.total||old.cards)) return old;   // v1.3 迁移
+  const old2=lsRead("rcs_v1"); if(old2&&old2.total) return old2;                    // v1.2 迁移
   return null;
 }
 async function initStorage(){
