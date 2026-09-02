@@ -158,6 +158,12 @@ main{padding:14px 18px 26px;max-width:1080px;margin:0 auto;}
 /* ===== 组织结构图（纯 CSS+JS 无限画布） ===== */
 .orgCanvas{position:relative;overflow:hidden;background:var(--card);min-height:480px;max-height:78vh;cursor:grab;user-select:none;}
 .orgCanvas.dragging{cursor:grabbing;}
+/* 组织视图全屏：整个页面变成画布 */
+body.org-full{overflow:hidden;}
+body.org-full main{display:flex;flex-direction:column;max-width:none;margin:0;padding:0;height:calc(100dvh - 64px);}
+body.org-full .searchRow{flex:0 0 auto;margin:0;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg);}
+body.org-full .tip,body.org-full .crumbbox{display:none;}
+body.org-full .orgCanvas{flex:1;min-height:0;max-height:none;border:none;border-radius:0;background:var(--bg);}/* 页脚注释保留 */
 .orgCanvas .orgLines{position:absolute;top:0;left:0;pointer-events:none;z-index:0;}
 .orgNode{position:absolute;border:2px solid var(--line);border-radius:12px;background:var(--card);padding:10px 13px;cursor:pointer;z-index:2;
   box-shadow:var(--shadow);transition:border-color .15s,box-shadow .15s;min-width:160px;max-width:200px;}
@@ -190,6 +196,12 @@ footer{padding:16px 18px 28px;color:var(--muted);font-size:11.5px;text-align:cen
   .modal{padding:0;}
   .modalBox{width:100%;max-height:94dvh;border-radius:18px 18px 0 0;padding:20px 16px 26px;}
   .crumbbox{position:sticky;top:106px;z-index:29;background:var(--bg);padding-bottom:8px;}
+  /* 组织视图全屏 - 移动端（顶栏更高） */
+  body.org-full main{height:calc(100dvh - 106px);}
+  body.org-full .searchRow{flex-wrap:wrap;gap:8px;padding:8px 10px;}
+  body.org-full .viewtabs{width:100%;order:1;}
+  body.org-full .searchRow input[type=search]{min-width:0;flex:1;order:2;}
+  body.org-full .searchRow .count{order:3;}
 }
 @media (min-width:761px){
   .crumbbox{display:block;}
@@ -466,9 +478,8 @@ let openCardId=null;
 
 function setSearch(v){ searchKw=v.trim(); closeDrawer(); renderAll(); }
 
-/* ================= 视图模式：org(组织结构图·主界面) / drill(层级下钻) / tree(树状总览) ================= */
+/* ================= 视图模式：org(组织结构图) / drill(层级下钻) / tree(树状总览) ================= */
 let viewMode="drill";
-/* ================= 视图模式：drill(层级下钻) / tree(树状总览) ================= */
 function setViewMode(m){
   viewMode=m;
   const list=document.getElementById("list");
@@ -479,6 +490,8 @@ function setViewMode(m){
   list.style.display=(m==="drill")?"":"none";
   tree.style.display=(m==="tree")?"":"none";
   org.style.display=(m==="org")?"":"none";
+  /* 组织视图：整个页面变成画布 */
+  document.body.classList.toggle("org-full",m==="org");
   if(crumbbox) crumbbox.style.display=(m==="drill")?"":"none";
   if(tip) tip.style.display=(m==="drill")?"":"none";
   document.querySelectorAll(".vtab").forEach(b=>b.classList.toggle("active",b.dataset.v===m));
