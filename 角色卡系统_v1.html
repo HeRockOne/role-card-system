@@ -3,277 +3,363 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>角色卡系统 v1.2 - NPC文件×管理理论×真人经验</title>
+<title>角色卡系统 v1.3 - 流转链 · 移动端 · IndexedDB</title>
 <style>
-:root{--bg:#0f1115;--card:#1a1e26;--border:#2a3040;--text:#e5e9f0;--dim:#8b93a7;--accent:#4f8cff;--green:#3ddc84;--yellow:#ffd166;--red:#ff5d5d;}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",sans-serif;min-height:100vh;}
-header{padding:20px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
-header h1{font-size:20px;font-weight:700;}
-header .sub{color:var(--dim);font-size:12px;}
-.tabs{display:flex;gap:8px;margin-left:auto;}
-.tabBtn{padding:6px 16px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--dim);cursor:pointer;font-size:13px;}
-.tabBtn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-main{padding:20px 28px;}
-.toolbar{margin-bottom:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-size:12px;}
-.btn:hover{border-color:var(--accent);}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
-.btn.danger{background:#2b1d1d;border-color:#4a2b2b;color:var(--red);}
-.btn.danger:hover{border-color:var(--red);}
-.btn[disabled]{opacity:.45;cursor:not-allowed;}
-.toolbar input[type=search]{padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px;width:240px;}
-.toolbar input[type=search]:focus{outline:none;border-color:var(--accent);}
-.count{color:var(--dim);font-size:12px;}
-.empty{grid-column:1/-1;text-align:center;color:var(--dim);font-size:13px;padding:48px 0;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
-.cardItem{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:border-color .15s;}
-.cardItem:hover{border-color:var(--accent);}
-.cardItem .name{font-size:15px;font-weight:600;margin-bottom:6px;}
-.cardItem .meta{font-size:11px;color:var(--dim);display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;}
-.tag{padding:2px 8px;border-radius:10px;font-size:10px;background:#232a38;color:var(--dim);}
-.tag.k-total{background:#1d2b1f;color:var(--green);}
-.tag.k-sub{background:#2b2418;color:var(--yellow);}
-.tag.k-instance{background:#2b1d1d;color:var(--red);}
-.parentLink{color:var(--dim);font-size:11px;cursor:pointer;}
-.parentLink:hover{color:var(--accent);}
-.cardItem .account{font-size:12px;color:var(--text);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.drawer{position:fixed;top:0;right:-520px;width:480px;max-width:92vw;height:100%;background:#151923;border-left:1px solid var(--border);transition:right .25s;overflow-y:auto;z-index:50;padding:20px;}
-.drawer.open{right:0;}
-.drawer .close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;}
-.drawer h2{font-size:18px;margin-bottom:4px;padding-right:28px;}
-.drawer .path{font-size:11px;color:var(--dim);margin-bottom:10px;}
-.breadcrumb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px;}
-.crumb{color:var(--accent);cursor:pointer;border:1px solid var(--border);border-radius:10px;padding:2px 8px;font-size:11px;background:var(--card);}
+:root{
+  --bg:#f6f5f1; --card:#ffffff; --line:#e7e3d8; --ink:#242830; --muted:#7d8494;
+  --accent:#4a56d6; --accent-soft:#eef0fb; --accent-ink:#3b46c0;
+  --green:#1f9d5a; --green-soft:#e6f6ec; --yellow:#9a6b00; --yellow-soft:#faf3e0;
+  --red:#d94343; --red-soft:#fdefec;
+  --shadow:0 1px 3px rgba(30,35,50,.08); --shadow-lg:0 8px 30px rgba(30,35,50,.16);
+  --radius:14px; --radius-sm:9px;
+  --topbar:#2b2f45; --topbar-ink:#fff;
+}
+[data-theme="dark"]{
+  --bg:#0f1115; --card:#1a1e26; --line:#2a3140; --ink:#e8ecf4; --muted:#8a93a8;
+  --accent:#5b8cff; --accent-soft:#1b2440; --accent-ink:#7ea4ff;
+  --green:#3ddc84; --green-soft:#12301f; --yellow:#ffd166; --yellow-soft:#32290f;
+  --red:#ff6b6b; --red-soft:#331a1a;
+  --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-lg:0 10px 34px rgba(0,0,0,.55);
+  --topbar:#12151d; --topbar-ink:#e8ecf4;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{font-size:16px;}
+body{background:var(--bg);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;min-height:100vh;transition:background .2s,color .2s;}
+
+/* ===== 顶栏 ===== */
+.topbar{position:sticky;top:0;z-index:40;background:var(--topbar);color:var(--topbar-ink);
+  padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:var(--shadow);}
+.brand{font-size:18px;font-weight:700;letter-spacing:.5px;display:flex;flex-direction:column;line-height:1.25;}
+.brand small{font-weight:400;font-size:11px;opacity:.65;}
+.tools{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;}
+.tbtn{border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff;border-radius:9px;
+  padding:8px 14px;font-size:13px;cursor:pointer;min-height:40px;transition:background .15s,border-color .15s;}
+.tbtn:hover{background:rgba(255,255,255,.12);}
+.tbtn.primary{background:#e8b339;border-color:#e8b339;color:#3a2c00;font-weight:600;}
+.tbtn.primary:hover{background:#f0c04c;}
+.tbtn:active{transform:scale(.96);}
+
+/* ===== 面包屑(流转链) ===== */
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:12px 18px 0;position:sticky;top:64px;z-index:30;
+  background:linear-gradient(var(--bg) 70%,transparent);}
+.crumb{border:1px solid var(--line);background:var(--card);color:var(--accent-ink);border-radius:999px;
+  padding:5px 13px;font-size:12.5px;cursor:pointer;box-shadow:var(--shadow);transition:border-color .15s,transform .1s;}
 .crumb:hover{border-color:var(--accent);}
-.crumbArrow{color:var(--dim);font-size:11px;}
-.legend{font-size:10px;color:var(--dim);margin-bottom:14px;line-height:1.7;}
-.drawer .actions{display:flex;gap:8px;margin-bottom:16px;}
-.dimBlock{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;}
-.dimBlock .dimName{font-size:12px;font-weight:600;color:var(--accent);margin-bottom:4px;}
-.dimBlock .dimVal{font-size:13px;line-height:1.6;}
-.dimBlock .src{font-size:10px;color:var(--dim);margin-top:4px;}
-.src-inherit{color:var(--dim);}
-.src-total{color:var(--accent);}
-.src-override{color:var(--yellow);}
-.src-patch{color:var(--green);}
-.treeView{padding:4px 0;}
-.treeGroup{color:var(--dim);font-size:12px;margin:16px 0 6px;letter-spacing:.5px;}
-.treeRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid transparent;border-radius:8px;cursor:pointer;font-size:13px;flex-wrap:wrap;}
-.treeRow:hover{background:var(--card);border-color:var(--border);}
-.treeLine{color:var(--dim);font-family:Consolas,monospace;font-size:11px;min-width:14px;}
-.treeName{font-weight:600;}
-.treeMeta{color:var(--dim);font-size:11px;}
-.treeHit{color:var(--green);font-size:11px;}
-.modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100;}
+.crumb.current{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+.crumb.arrow{color:var(--muted);border:none;background:none;box-shadow:none;padding:0 1px;cursor:default;}
+
+/* ===== 主区 ===== */
+main{padding:14px 18px 26px;max-width:1080px;margin:0 auto;}
+.searchRow{display:flex;gap:10px;align-items:center;margin:10px 0 4px;flex-wrap:wrap;}
+.searchRow input[type=search]{flex:1;min-width:200px;padding:11px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--card);color:var(--ink);font-size:14px;box-shadow:var(--shadow);}
+.searchRow input[type=search]:focus{outline:none;border-color:var(--accent);}
+.count{color:var(--muted);font-size:12.5px;white-space:nowrap;}
+.tip{color:var(--muted);font-size:12px;margin:2px 0 14px;line-height:1.7;}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+
+/* ===== 卡片元素 ===== */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;
+  box-shadow:var(--shadow);cursor:pointer;transition:border-color .15s,transform .12s,box-shadow .15s;display:flex;flex-direction:column;gap:8px;}
+.card:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow-lg);}
+.card:active{transform:scale(.985);}
+.cardTop{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cname{font-size:16px;font-weight:700;}
+.kids{margin-left:auto;font-size:11.5px;color:var(--muted);background:var(--accent-soft);border-radius:999px;padding:3px 10px;white-space:nowrap;}
+.kids.none{background:transparent;border:1px dashed var(--line);}
+.cmeta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.up{color:var(--accent-ink);cursor:pointer;border:1px solid var(--line);border-radius:999px;padding:2px 9px;background:var(--card);}
+.up:hover{border-color:var(--accent);}
+.caccount{font-size:13px;line-height:1.65;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.cpath{font-size:11px;color:var(--muted);}
+.cpath b{color:var(--accent-ink);font-weight:600;}
+.chits{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--muted);}
+.chit{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chit b{color:var(--green);font-weight:600;}
+.cops{display:flex;gap:8px;margin-top:2px;}
+.cops button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:var(--radius-sm);
+  padding:8px 6px;font-size:12.5px;cursor:pointer;min-height:38px;transition:border-color .15s,background .15s;}
+.cops button:hover{border-color:var(--accent);color:var(--accent-ink);}
+.cops button.b-edit:hover{color:var(--yellow);border-color:var(--yellow);}
+.cops button.b-del:hover{color:var(--red);border-color:var(--red);}
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap;}
+.tag.k-total{background:var(--accent-soft);color:var(--accent-ink);}
+.tag.k-sub{background:var(--yellow-soft);color:var(--yellow);}
+.tag.k-instance{background:var(--green-soft);color:var(--green);}
+.tag.k-root{background:var(--card);border:1px solid var(--line);color:var(--muted);}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);font-size:13.5px;padding:52px 16px;line-height:2;}
+.empty button{margin:4px 6px;}
+.empty .big{font-size:30px;}
+
+/* ===== 抽屉 ===== */
+.drawer{position:fixed;top:0;right:-520px;width:500px;max-width:100vw;height:100%;height:100dvh;background:var(--card);
+  border-left:1px solid var(--line);transition:right .26s ease;overflow-y:auto;z-index:60;padding:20px;box-shadow:var(--shadow-lg);}
+.drawer.open{right:0;}
+.dclose{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;width:40px;height:40px;border-radius:10px;}
+.dclose:hover{background:var(--accent-soft);color:var(--accent-ink);}
+.dhead{display:flex;align-items:center;gap:8px;margin:4px 0 2px;padding-right:44px;}
+.dname{font-size:19px;font-weight:700;}
+.dpath{font-size:12px;color:var(--muted);margin:4px 0 12px;}
+.legend{font-size:11.5px;color:var(--muted);margin:10px 0 12px;line-height:1.8;border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px;background:var(--bg);}
+.dimBlock{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 13px;margin-bottom:10px;background:var(--bg);}
+.dimName{font-size:12.5px;font-weight:700;color:var(--accent-ink);margin-bottom:5px;line-height:1.55;}
+.dimName span{display:block;font-weight:400;font-size:11px;color:var(--muted);}
+.dimVal{font-size:13.5px;line-height:1.65;}
+.src{font-size:11px;margin-top:5px;}
+.src-inherit{color:var(--muted);} .src-total{color:var(--accent-ink);} .src-override{color:var(--yellow);} .src-patch{color:var(--green);}
+
+/* ===== 模态 ===== */
+.modal{position:fixed;inset:0;background:rgba(20,24,38,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:14px;}
 .modal.open{display:flex;}
-.modalBox{background:#151923;border:1px solid var(--border);border-radius:12px;padding:20px;width:680px;max-width:94vw;max-height:86vh;overflow-y:auto;}
-.modalBox h3{margin-bottom:12px;font-size:16px;}
-.newTip{background:#1a2233;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--dim);margin-bottom:12px;line-height:1.8;}
-.newTip b{color:var(--text);}
-.field{margin-bottom:10px;}
-.field label{display:block;font-size:12px;color:var(--dim);margin-bottom:4px;}
-.field input,.field select,.field textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#1a1e26;color:var(--text);font-size:13px;}
-.field textarea{min-height:60px;resize:vertical;}
-#dim-editor textarea{min-height:44px;}
-.dimGuide{display:block;color:var(--dim);font-size:10px;font-weight:400;margin-top:2px;line-height:1.5;}
-.dimInherit{display:block;font-size:10px;margin-top:4px;color:var(--yellow);line-height:1.5;}
+.modalBox{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;width:680px;max-width:100%;
+  max-height:92dvh;overflow-y:auto;box-shadow:var(--shadow-lg);}
+.modalBox h3{margin-bottom:12px;font-size:17px;}
+.newTip{background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.8;}
+.newTip b{color:var(--accent-ink);}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  background:var(--bg);color:var(--ink);font-size:14px;font-family:inherit;}
+.field textarea{min-height:58px;resize:vertical;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);}
+.dimGuide{display:block;color:var(--muted);font-size:10.5px;font-weight:400;margin-top:2px;line-height:1.5;}
+.dimInherit{display:block;font-size:11px;margin-top:5px;line-height:1.55;}
 .dimInherit.patch{color:var(--green);}
-.dimInherit.inherit{color:var(--dim);}
-.hint{font-size:10px;color:var(--dim);display:block;margin-bottom:4px;}
-.modalBtns{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;}
-footer{padding:14px 28px;border-top:1px solid var(--border);color:var(--dim);font-size:11px;text-align:center;}
+.dimInherit.inherit{color:var(--muted);}
+.dimInherit.own{color:var(--accent-ink);}
+.hint{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;line-height:1.6;}
+.modalBtns{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;}
+.mbtn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:10px 18px;font-size:14px;cursor:pointer;min-height:42px;}
+.mbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+.mbtn:hover{filter:brightness(1.06);}
+.mbtn:active{transform:scale(.97);}
+
+/* ===== 页脚 ===== */
+footer{padding:16px 18px 28px;color:var(--muted);font-size:11.5px;text-align:center;line-height:2;border-top:1px solid var(--line);}
+#store-badge{display:inline-block;margin-left:8px;border:1px solid var(--line);border-radius:999px;padding:1px 9px;font-size:10.5px;}
+
+/* ===== 移动端适配 ===== */
+@media (max-width:760px){
+  .topbar{padding:10px 12px;gap:10px;}
+  .brand{font-size:16px;}
+  .tools{width:100%;order:3;margin-left:0;}
+  .tbtn{flex:1;padding:10px 8px;font-size:12.5px;}
+  .tbtn.primary{flex:2;}
+  .crumbs{padding:10px 12px 0;top:52px;gap:5px;}
+  .crumb{padding:5px 11px;font-size:12px;}
+  main{padding:12px 12px 22px;}
+  .list{grid-template-columns:1fr;gap:12px;}
+  .card{padding:15px 14px;}
+  .cname{font-size:16.5px;}
+  .cops button{min-height:42px;font-size:13px;}
+  .drawer{width:100vw;padding:18px 14px 30px;border-left:none;}
+  .modal{padding:0;}
+  .modalBox{width:100%;max-height:94dvh;border-radius:18px 18px 0 0;padding:20px 16px 26px;}
+  .crumbbox{position:sticky;top:106px;z-index:29;background:var(--bg);padding-bottom:8px;}
+}
+@media (min-width:761px){
+  .crumbbox{display:block;}
+}
 </style>
 </head>
 <body>
-<header>
-  <h1>🏯 角色卡系统 v1.2</h1>
-  <span class="sub">NPC文件 × 管理理论 × 真人经验 | 总卡→分卡→实例 三层继承</span>
-  <div class="tabs">
-    <button class="tabBtn active" data-tab="total" onclick="setTab('total')">总卡</button>
-    <button class="tabBtn" data-tab="sub" onclick="setTab('sub')">分卡</button>
-    <button class="tabBtn" data-tab="instance" onclick="setTab('instance')">实例卡</button>
-    <button class="tabBtn" data-tab="tree" onclick="setTab('tree')">🌳 继承链</button>
+<header class="topbar">
+  <div class="brand">🏯 角色卡系统 v1.3
+    <small>总卡 → 分卡 → 实例卡 · 三层继承 · 点卡片向下钻 · 点面包屑向上回</small>
+  </div>
+  <div class="tools">
+    <button class="tbtn primary" onclick="openNewFromCurrent()">＋ 新建卡片</button>
+    <button class="tbtn" id="btn-theme" onclick="toggleTheme()">🌙</button>
+    <button class="tbtn" onclick="exportJSON()">⭳ 导出</button>
+    <button class="tbtn" onclick="importJSON()">⭱ 导入</button>
   </div>
 </header>
+
+<div class="crumbbox">
+  <nav class="crumbs" id="crumbs" aria-label="层级流转链"></nav>
+</div>
+
 <main>
-  <div class="toolbar">
-    <button class="btn primary" onclick="openNew()">+ 新建角色卡</button>
-    <button class="btn" onclick="exportJSON()">导出 JSON</button>
-    <button class="btn" onclick="importJSON()">导入 JSON</button>
-    <input type="search" id="f-search" placeholder="🔍 搜索: 名称 / 宗门 / 堂口 / 层级 / 描述" oninput="searchKw=this.value.trim(); refreshView();">
+  <div class="searchRow">
+    <input type="search" id="f-search" placeholder="🔍 搜名称 / 宗门 / 堂口 / 层级 / 摘要…" oninput="setSearch(this.value)">
     <span class="count" id="f-count"></span>
   </div>
-  <div class="grid" id="grid"></div>
-  <div class="treeView" id="treeView" style="display:none"></div>
+  <div class="tip" id="f-tip">💡 点卡片 = 钻到它的下一级；点「↑ 父卡」或面包屑 = 向上回流；「📄 详情」看全部 10 维定义。</div>
+  <div class="list" id="list"></div>
 </main>
+
+<footer>
+  合并铁律：共性上升 / 差异下沉 / 互斥分叉 / 补丁隔离 · 留空即继承，先认岗位再认人
+  <span id="store-badge">存储…</span>
+</footer>
+
 <div class="drawer" id="drawer"></div>
+
 <div class="modal" id="modal">
   <div class="modalBox">
     <h3 id="modal-title">新建角色卡</h3>
-    <div class="newTip">💡 一句话建模法:先答三问——<b>他能做什么</b>(权杖边界)、<b>他要什么</b>(使命与账本)、<b>他怕什么</b>(恐惧清单)。其余维度按需补充,<b>留空即继承父层,不用全填</b>。写完下面每一维都有参考示例。</div>
+    <div class="newTip">💡 一句话建模法：先答三问 —— <b>他能做什么</b>（权杖边界）、<b>他要什么</b>（使命与账本）、<b>他怕什么</b>（恐惧清单）。其余按需补充，<b>留空即继承父层</b>。每个维度下方有人话提问和示例。</div>
     <div class="field"><label>类型</label>
       <select id="f-kind" onchange="onKindChange()">
-        <option value="sub">分卡(继承总卡)</option>
-        <option value="instance">实例卡(继承分卡)</option>
-        <option value="total">总卡(独立)</option>
+        <option value="sub">分卡（继承总卡）</option>
+        <option value="instance">实例卡（继承分卡）</option>
+        <option value="total">总卡（独立）</option>
       </select></div>
     <div class="field"><span class="hint" id="f-parenthint"></span>
       <select id="f-parent" onchange="onParentChange()"><option value="">无</option></select></div>
-    <div class="field"><label>名称 *</label><input id="f-name" placeholder="如: 中型制造-采购长老"></div>
+    <div class="field"><label>名称 *</label><input id="f-name" placeholder="如：中型制造-采购长老"></div>
     <div class="field"><label>宗门类型</label><input id="f-sect" placeholder="中型制造 / 电商 / 外贸"></div>
     <div class="field"><label>堂口</label><input id="f-hall" placeholder="财务 / 市场 / 后勤"></div>
     <div class="field"><label>层级</label><input id="f-level" placeholder="长老 / 主管 / 宗主"></div>
-    <div class="field"><label>一句话摘要</label><textarea id="f-account" placeholder="账本摘要,如:KPI=成本/应收/审计,怕呆坏账"></textarea></div>
-    <div class="field"><span class="hint">维度编辑:只写与父层不同的内容。黄色提示=该维继承自哪层;清空已有值并保存=撤销这条覆盖。</span></div>
+    <div class="field"><label>一句话摘要</label><textarea id="f-account" placeholder="账本摘要，如：KPI=成本/应收/审计，怕呆坏账"></textarea></div>
+    <div class="field"><span class="hint">维度编辑：只写与父层不同的内容。提示「🌳 继承自」=该维自动继承，不用填；清空已有值并保存 = 撤销这条覆盖。</span></div>
     <div id="dim-editor"></div>
     <div class="modalBtns">
-      <button class="btn" onclick="closeModal()">取消</button>
-      <button class="btn primary" id="modal-ok" onclick="saveCard()">创建</button>
+      <button class="mbtn" onclick="closeModal()">取消</button>
+      <button class="mbtn primary" id="modal-ok" onclick="saveCard()">创建</button>
     </div>
   </div>
 </div>
-<footer>角色卡系统 v1.2 · 合并铁律:共性上升 / 差异下沉 / 互斥分叉 / 补丁隔离 · 先认岗位再认人,留空即继承</footer>
+<input type="file" id="import-file" accept=".json" hidden>
+
 <script>
-/* ============ 数据模型:三层继承 total > sub > instance ============ */
+'use strict';
+/* ================= 数据模型：三层继承 total > sub > instance ================= */
 const DIMS = ["身份档案","权杖边界","使命与账本","恐惧清单","弦外之音","决策风格","沟通频道","资源网络","考核与晋升","红线雷区"];
 
-/* 十维「人话翻译」:每维一句话提问 + 示例,降低填写门槛 */
+/* 十维「人话翻译」：每维一句话提问 + 示例，降低填写门槛 */
 const DIM_GUIDE = {
- "身份档案":"他是谁、什么岗位、在哪个层级?例:退货组主管带1人,直属后勤长老",
- "权杖边界":"他能批什么、动不了什么?例:批5000内报销,动不了编制和预算",
- "使命与账本":"他的KPI / 账本是什么?例:错误率≤0.5%、月均处理507笔",
- "恐惧清单":"他怕什么?哪句话会踩雷?例:怕账实不符被审计抓",
- "弦外之音":"口头禅背后的真意?例:'再想想'=不同意,'尽量明天发'=明天必须发",
- "决策风格":"他怎么拍板?数据/直觉/共识/独断?例:只信单据凭证",
- "沟通频道":"话往哪递?报表/数据/直给/留痕?例:递报表+成本一页纸,先报忧后报喜",
- "资源网络":"他依赖谁、卡着谁?例:依赖宗主背书,卡财务报销",
- "考核与晋升":"他被谁考核、怎么升?例:宗主打分,绩效×潜力九宫格",
- "红线雷区":"什么一票否决?碰了就死?例:虚报费用、隐瞒坏账"
+ "身份档案":"他是谁、什么岗位、在哪个层级？例：退货组主管带1人，直属后勤长老",
+ "权杖边界":"他能批什么、动不了什么？例：批5000内报销，动不了编制和预算",
+ "使命与账本":"他的KPI / 账本是什么？例：错误率≤0.5%、月均处理507笔",
+ "恐惧清单":"他怕什么？哪句话会踩雷？例：怕账实不符被审计抓",
+ "弦外之音":"口头禅背后的真意？例：'再想想'=不同意，'尽量明天发'=明天必须发",
+ "决策风格":"他怎么拍板？数据/直觉/共识/独断？例：只信单据凭证",
+ "沟通频道":"话往哪递？报表/数据/直给/留痕？例：递报表+成本一页纸，先报忧后报喜",
+ "资源网络":"他依赖谁、卡着谁？例：依赖宗主背书，卡财务报销",
+ "考核与晋升":"他被谁考核、怎么升？例：宗主打分，绩效×潜力九宫格",
+ "红线雷区":"什么一票否决？碰了就死？例：虚报费用、隐瞒坏账"
 };
 
-/* 种子数据:总卡(物种级共性) */
+/* 种子数据：总卡（宗门级共性） */
 const TOTAL_CARDS = [
  {id:"total-boss",name:"宗主总卡",sect:"全宗门",hall:"宗主",level:"总",
-  account:"定方向、活下来。最怕亏钱爆雷,只算三行账:出活、添麻烦、干多久。",
+  account:"定方向、活下来。最怕亏钱爆雷，只算三行账：出活、添麻烦、干多久。",
   dims:{
-   "身份档案":"决策层,对全部堂口有最终裁决权",
+   "身份档案":"决策层，对全部堂口有最终裁决权",
    "权杖边界":"预算审批、人事任命、战略方向、跨口仲裁",
-   "使命与账本":"盈利与现金流;识人用人与团队驾驭力",
+   "使命与账本":"盈利与现金流；识人用人与团队驾驭力",
    "恐惧清单":"现金流失血、核心人跑路、重大合规爆雷",
-   "弦外之音":"'原则上同意'=基本不同意;'你看着办'=出事你扛",
-   "决策风格":"直觉+数据混合,喜欢确定性,讨厌惊喜(尤其坏惊喜)",
-   "沟通频道":"听结论不听过程;带方案做选择题,不做问答题",
-   "资源网络":"上游资方/董事会,平级高管联盟,下游向心力",
-   "考核与晋升":"九宫格定位:绩效×潜力;德勇才排序,德第一",
+   "弦外之音":"'原则上同意'=基本不同意；'你看着办'=出事你扛",
+   "决策风格":"直觉+数据混合，喜欢确定性，讨厌惊喜（尤其坏惊喜）",
+   "沟通频道":"听结论不听过程；带方案做选择题，不做问答题",
+   "资源网络":"上游资方/董事会，平级高管联盟，下游向心力",
+   "考核与晋升":"九宫格定位：绩效×潜力；德勇才排序，德第一",
    "红线雷区":"造假、抢功甩锅、越级架空、凌驾业务一票否决"}},
  {id:"total-func",name:"职能长老总卡",sect:"全宗门",hall:"职能堂口",level:"总",
-  account:"承上启下、执行变现。共性:KPI稳、不添乱。",
+  account:"承上启下、执行变现。共性：KPI稳、不添乱。",
   dims:{
-   "身份档案":"中层,业务/职能堂口负责人,向上汇报",
-   "权杖边界":"本口人事建议权、执行决策权,重大事项报宗主",
-   "使命与账本":"把宗主管意图翻译成执行,把执行结果翻成报告",
+   "身份档案":"中层，业务/职能堂口负责人，向上汇报",
+   "权杖边界":"本口人事建议权、执行决策权，重大事项报宗主",
+   "使命与账本":"把宗主管意图翻译成执行，把执行结果翻成报告",
    "恐惧清单":"绩效不达标、局面失控、被越级、被甩锅",
-   "弦外之音":"'再想想'=不满意;'辛苦了'=客套,别当真",
-   "决策风格":"依赖数据+上级意图,需要授权边界清晰",
-   "沟通频道":"向上带方案,向下拆任务,平级当翻译器",
-   "资源网络":"上游宗主背书,平级堂口协作,下游队伍执行力",
+   "弦外之音":"'再想想'=不满意；'辛苦了'=客套，别当真",
+   "决策风格":"依赖数据+上级意图，需要授权边界清晰",
+   "沟通频道":"向上带方案，向下拆任务，平级当翻译器",
+   "资源网络":"上游宗主背书，平级堂口协作，下游队伍执行力",
    "考核与晋升":"KPI达成+跨口协作评分+培养梯队",
    "红线雷区":"抢功甩锅、微操养废下属、隐瞒坏消息"}}
 ];
-</script>
-<script>
-/* 分卡:只存差异(delta),继承父卡 */
+
+/* 分卡：只存差异（delta），继承父卡 */
 const SUB_CARDS = [
  {id:"sub-fin-mfg",parentId:"total-func",name:"中型制造-财务长老",sect:"中型制造",hall:"财务",level:"长老",
-  account:"管钱不算货。KPI=成本/应收/审计,怕呆坏账。",
+  account:"管钱不算货。KPI=成本/应收/审计，怕呆坏账。",
   dims:{
-   "身份档案":"职能堂口负责人,直属宗主,管钱不管仓库",
-   "权杖边界":"付款审批、预算控制、账务裁决;批不了业务决策",
-   "使命与账本":"KPI=利润率、应收周转、审计零事故;账得平、现金流活",
+   "身份档案":"职能堂口负责人，直属宗主，管钱不管仓库",
+   "权杖边界":"付款审批、预算控制、账务裁决；批不了业务决策",
+   "使命与账本":"KPI=利润率、应收周转、审计零事故；账得平、现金流活",
    "恐惧清单":"呆坏账、审计事故、账实不符被查",
-   "弦外之音":"'费用再压压'=必须压;'走流程'=别找我特批",
-   "决策风格":"数据驱动,只信单据凭证",
-   "沟通频道":"递报表+成本一页纸;先报忧后报喜",
+   "弦外之音":"'费用再压压'=必须压；'走流程'=别找我特批",
+   "决策风格":"数据驱动，只信单据凭证",
+   "沟通频道":"递报表+成本一页纸；先报忧后报喜",
    "考核与晋升":"审计通过率+成本控制达标",
    "红线雷区":"虚报费用、隐瞒坏账"}},
  {id:"sub-mkt-mfg",parentId:"total-func",name:"中型制造-市场长老",sect:"中型制造",hall:"市场",level:"长老",
   account:"签单、守客户、防丢失。KPI=销售额/复购。",
   dims:{
-   "身份档案":"利润口负责人,直连客户与渠道",
-   "权杖边界":"报价权限、渠道谈判、赠品政策;批不了生产排期",
+   "身份档案":"利润口负责人，直连客户与渠道",
+   "权杖边界":"报价权限、渠道谈判、赠品政策；批不了生产排期",
    "使命与账本":"KPI=销售额、复购率、新客户开拓",
    "恐惧清单":"大客户流失、订单被竞品抢、回款烂账",
    "弦外之音":"'客户那边再想想'=客户不满意了",
-   "决策风格":"客户导向,快速变通",
-   "沟通频道":"说客户故事,要资源给数字(ROI)",
+   "决策风格":"客户导向，快速变通",
+   "沟通频道":"说客户故事，要资源给数字（ROI）",
    "考核与晋升":"业绩达成+客户满意度",
    "红线雷区":"乱承诺交期、低价冲量伤害毛利"}},
  {id:"sub-log-mfg",parentId:"total-func",name:"中型制造-后勤长老",sect:"中型制造",hall:"后勤/仓储",level:"长老",
   account:"货得发、仓得清、别断供。KPI=时效/库存。",
   dims:{
-   "身份档案":"执行口负责人,管仓管车队发货退货",
-   "权杖边界":"仓储排班、发货调度、库存管理;批不了采购预算",
+   "身份档案":"执行口负责人，管仓管车队发货退货",
+   "权杖边界":"仓储排班、发货调度、库存管理；批不了采购预算",
    "使命与账本":"KPI=发货准时率、库存周转、退货处理时效",
    "恐惧清单":"断供、爆仓、错发漏发被客户投诉",
    "弦外之音":"'尽量明天发'=明天必须发",
-   "决策风格":"经验+流程,重实操可行",
-   "沟通频道":"报进度报风险,要支持讲影响",
+   "决策风格":"经验+流程，重实操可行",
+   "沟通频道":"报进度报风险，要支持讲影响",
    "考核与晋升":"准时率+差错率双指标",
    "红线雷区":"隐瞒库存差异、压单不报"}},
  {id:"sub-des-mfg",parentId:"total-func",name:"中型制造-设计长老",sect:"中型制造",hall:"设计/研发",level:"长老",
   account:"图对、样合格、别返工。KPI=图纸一次通过率。",
   dims:{
-   "身份档案":"技术口负责人,管设计团队与样品",
-   "权杖边界":"技术方案、图纸审核、样品判定;批不了量产预算",
+   "身份档案":"技术口负责人，管设计团队与样品",
+   "权杖边界":"技术方案、图纸审核、样品判定；批不了量产预算",
    "使命与账本":"KPI=一次通过率、按时出图、缺陷率",
    "恐惧清单":"返工、设计缺陷上量后被追责",
-   "弦外之音":"'再优化一下'=不合格,重做",
-   "决策风格":"专业主义,讲究技术依据",
-   "沟通频道":"讲技术原因要讲人话,别甩术语",
+   "弦外之音":"'再优化一下'=不合格，重做",
+   "决策风格":"专业主义，讲究技术依据",
+   "沟通频道":"讲技术原因要讲人话，别甩术语",
    "考核与晋升":"一次通过率+项目按时率",
    "红线雷区":"隐瞒设计缺陷、甩锅工艺"}},
  {id:"sub-pro-mfg",parentId:"total-func",name:"中型制造-生产长老",sect:"中型制造",hall:"生产",level:"长老",
   account:"线得开、良率保、别停线。KPI=良率/产能。",
   dims:{
-   "身份档案":"产线负责人,管工人工序排期",
-   "权杖边界":"排产、工位调配、良率处置;批不了设备采购",
+   "身份档案":"产线负责人，管工人工序排期",
+   "权杖边界":"排产、工位调配、良率处置；批不了设备采购",
    "使命与账本":"KPI=良率、产能利用率、交付达成",
    "恐惧清单":"停线、批量报废、交期延误",
    "弦外之音":"'你们看着排'=责任你担",
-   "决策风格":"结果导向,重实际产出",
-   "沟通频道":"报数字报批次,问题带方案",
+   "决策风格":"结果导向，重实际产出",
+   "沟通频道":"报数字报批次，问题带方案",
    "考核与晋升":"良率+产能+安全",
    "红线雷区":"以次充好、瞒报不良率"}}
 ];
-</script>
-<script>
-/* 实例卡:只存补丁,继承分卡 */
+
+/* 实例卡：只存补丁，继承分卡 */
 const INSTANCE_CARDS = [
  {id:"ins-lixx",parentId:"sub-log-mfg",name:"李XX(实际)",sect:"中型制造",hall:"后勤/退货组",level:"主管",
-  account:"退货组主管,月均507笔,错误率≤0.5%,5个Python工具,独立写SOP 173行。",
+  account:"退货组主管，月均507笔，错误率≤0.5%，5个Python工具，独立写SOP 173行。",
   patches:{
-   "身份档案":"2人退货组主管(带1人),直属后勤长老",
-   "使命与账本":"退货全流程管理+流程优化+数据报表;KPI=错误率≤0.5%",
+   "身份档案":"2人退货组主管(带1人)，直属后勤长老",
+   "使命与账本":"退货全流程管理+流程优化+数据报表；KPI=错误率≤0.5%",
    "恐惧清单":"数据口径打架、被追第三层答不出、跨部门推不动",
-   "弦外之音":"警惕'AI写的代码'被误读为'没本事';空白期30个月要正面回答",
-   "决策风格":"实操先行,先做能做的,时间线拆解法",
-   "沟通频道":"数据说话(507笔/173行/2天);主动认错纠口径",
-   "红线雷区":"绝不做阿酥式包装;诚实是护城河"}},
+   "弦外之音":"警惕'AI写的代码'被误读为'没本事'；空白期30个月要正面回答",
+   "决策风格":"实操先行，先做能做的，时间线拆解法",
+   "沟通频道":"数据说话(507笔/173行/2天)；主动认错纠口径",
+   "红线雷区":"绝不做阿酥式包装；诚实是护城河"}},
  {id:"ins-zhangfin",parentId:"sub-fin-mfg",name:"张财务(实际)",sect:"中型制造",hall:"财务",level:"长老",
-  account:"付款审批、预算控制,怕呆坏账和账实不符。",
+  account:"付款审批、预算控制，怕呆坏账和账实不符。",
   patches:{
    "弦外之音":"他说'再想想'=不同意(会议室皱眉那次)",
-   "沟通频道":"特批前先备齐单据,别拿口头承诺"}},
+   "沟通频道":"特批前先备齐单据，别拿口头承诺"}},
  {id:"ins-wlmaster",parentId:"sub-log-mfg",name:"王主管(实际)",sect:"中型制造",hall:"后勤/仓储",level:"长老",
-  account:"管仓发货,怕断供爆仓。",
+  account:"管仓发货，怕断供爆仓。",
   patches:{
    "恐惧清单":"退货组数据出错会连带他背锅",
-   "弦外之音":"'尽量明天发'=明天必须发,别试探"}}
+   "弦外之音":"'尽量明天发'=明天必须发，别试探"}}
 ];
-</script>
-<script>
-/* ============ 解析引擎:沿 parentId 合并链,子层覆盖父层 ============ */
+
+/* ================= 解析引擎 ================= */
 function findCard(id){
   for(const c of [...TOTAL_CARDS,...SUB_CARDS,...INSTANCE_CARDS]) if(c.id===id) return c;
   return null;
@@ -283,29 +369,25 @@ function kindOf(card){
   return card.id.startsWith("total")?"total":(card.id.startsWith("sub")?"sub":"instance");
 }
 function resolveCard(card){
-  const out={};
-  const chain=[];
-  let cur=card;
+  const out={}; let cur=card; const chain=[];
   while(cur){ chain.unshift(cur); cur=cur.parentId?findCard(cur.parentId):null; }
   chain.forEach(c=>{
-    const kind=kindOf(c);
-    if(c.dims){ Object.entries(c.dims).forEach(([k,v])=>{ out[k]={val:v,src:kind}; }); }
-    if(c.patches){ Object.entries(c.patches).forEach(([k,v])=>{ out[k]={val:v,src:"patch"}; }); }
+    const k=kindOf(c);
+    if(c.dims){ Object.entries(c.dims).forEach(([d,v])=>{ out[d]={val:v,src:k}; }); }
+    if(c.patches){ Object.entries(c.patches).forEach(([d,v])=>{ out[d]={val:v,src:"patch"}; }); }
   });
   DIMS.forEach(d=>{ if(!out[d]) out[d]={val:"(继承:未定义)",src:"inherit"}; });
   return out;
 }
-/* 沿父子链向上找某一维的显式定义来源 */
-function sourceOf(card, dim){
+function sourceOf(card,dim){
   let cur=card;
   while(cur){
     const t=(kindOf(cur)==="instance")?(cur.patches||{}):(cur.dims||{});
-    if(t[dim]) return {card:cur, val:t[dim], kind:kindOf(cur)};
+    if(t[dim]) return {card:cur,val:t[dim],kind:kindOf(cur)};
     cur=cur.parentId?findCard(cur.parentId):null;
   }
   return null;
 }
-/* 从当前卡一路到根的继承链(自总卡 → 当前卡) */
 function chainOf(card){
   const arr=[]; let cur=card;
   while(cur){ arr.unshift(cur); cur=cur.parentId?findCard(cur.parentId):null; }
@@ -314,169 +396,164 @@ function chainOf(card){
 const KIND_LABEL={total:"总卡",sub:"分卡",instance:"实例卡"};
 const SRC_CLASS={inherit:"src-inherit",total:"src-total",sub:"src-override",patch:"src-patch"};
 const SRC_LABEL={inherit:"继承(未定义)",total:"总卡共性",sub:"分卡定义",patch:"个人补丁"};
-const SRC_TIP={inherit:"此维整条链都没定义,显示占位",total:"跨行业共性,由总卡定义",sub:"该分卡的特殊定义(差异下沉)",patch:"实例卡的个人补丁(只归本人)"};
-
-function pool(kind){ return kind==="total"?TOTAL_CARDS:kind==="sub"?SUB_CARDS:INSTANCE_CARDS; }
+const SRC_TIP={inherit:"整条链都没定义，显示占位",total:"跨行业共性，由总卡定义",sub:"该分卡的特殊定义（差异下沉）",patch:"实例卡的个人补丁（只归本人）"};
+const ALL=()=>[...TOTAL_CARDS,...SUB_CARDS,...INSTANCE_CARDS];
+const childrenOf=id=>ALL().filter(c=>c.parentId===id);
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function matchesKw(c,kw){ return [c.name,c.sect,c.hall,c.level,c.account].join(" ").toLowerCase().includes(kw); }
 
-/* ============ 状态 ============ */
-let currentTab="total";
+/* ================= 状态 ================= */
+let currentId=null;      // 当前聚焦卡 id（null=宗门总卡根层）；列表 = 它的直接子卡
 let searchKw="";
 let editingId=null;
 let openCardId=null;
 
-function matchesKw(c,kw){
-  return [c.name,c.sect,c.hall,c.level,c.account].join(" ").toLowerCase().includes(kw);
-}
-function refreshView(){
-  if(currentTab==="tree") renderTree(); else renderGrid();
-}
+function setSearch(v){ searchKw=v.trim(); closeDrawer(); renderAll(); }
 
-/* ============ 网格渲染(支持搜索) ============ */
-function renderGrid(){
-  const grid=document.getElementById("grid");
+/* ================= 流转链：面包屑 + 层级列表 ================= */
+function renderCrumbs(){
+  const el=document.getElementById("crumbs");
+  if(searchKw){ el.innerHTML='<span class="crumb current">🔍 搜索结果（全局）</span>'; return; }
+  let h='<span class="crumb'+(currentId?"":" current")+'" onclick="clickCard(null)">🏯 宗门总卡</span>';
+  if(currentId){
+    chainOf(findCard(currentId)).forEach((c,i,arr)=>{
+      h+='<span class="crumb arrow">›</span>';
+      const isLast=i===arr.length-1;
+      h+=`<span class="crumb${isLast?" current":""}" ${isLast?"":`onclick="clickCard('${c.id}')"`}>${KIND_LABEL[kindOf(c)]}：${esc(c.name)}</span>`;
+    });
+  }
+  el.innerHTML=h;
+}
+function visibleCards(){
   const kw=searchKw.toLowerCase();
-  const cards=pool(currentTab).filter(c=>!kw||matchesKw(c,kw));
-  grid.innerHTML="";
+  if(kw) return ALL().filter(c=>matchesKw(c,kw));
+  return currentId ? ALL().filter(c=>c.parentId===currentId) : ALL().filter(c=>!c.parentId);
+}
+function cardHTML(c){
+  const k=kindOf(c); const p=c.parentId?findCard(c.parentId):null; const kids=childrenOf(c.id);
+  const rs=resolveCard(c);
+  const own=DIMS.filter(d=>rs[d].src===k).slice(0,2).map(d=>`<span class="chit">✏️ <b>${esc(d)}</b> ${esc((rs[d].val+"").slice(0,26))}${rs[d].val.length>26?"…":""}</span>`).join("");
+  const chain=c.parentId?chainOf(c).slice(0,-1).map(x=>x.name).join(" › "):null;
+  return `<div class="card" onclick="clickCard('${c.id}')">
+    <div class="cardTop">
+      <span class="tag k-${k}">${KIND_LABEL[k]}</span>
+      <span class="cname">${esc(c.name)}</span>
+      ${kids.length?`<span class="kids">▾ ${kids.length} 张下级</span>`:`<span class="kids none">叶子卡</span>`}
+    </div>
+    <div class="cmeta">
+      ${p?`<span class="up" onclick="event.stopPropagation();clickCard('${p.id}')">↑ ${esc(p.name)}</span>`:""}
+      <span>${esc(c.sect||"")}</span>${c.hall?`<span>· ${esc(c.hall)}</span>`:""}${c.level?`<span>· ${esc(c.level)}</span>`:""}
+    </div>
+    <div class="caccount">${esc(c.account||"")}</div>
+    ${chain?`<div class="cpath">路径：<b>${esc(chain)}</b></div>`:(k!=="total"?"":'<div class="cpath">根卡 · 宗门级共性</div>')}
+    ${own?`<div class="chits">${own}</div>`:""}
+    <div class="cops">
+      <button onclick="event.stopPropagation();openDrawer('${c.id}')">📄 详情</button>
+      <button class="b-edit" onclick="event.stopPropagation();openEdit('${c.id}')">✏️ 编辑</button>
+      <button class="b-del" onclick="event.stopPropagation();deleteCard('${c.id}')">🗑 删除</button>
+    </div>
+  </div>`;
+}
+function renderList(){
+  const box=document.getElementById("list");
+  const cards=visibleCards();
+  const cur=currentId?findCard(currentId):null;
   document.getElementById("f-count").textContent="共 "+cards.length+" 张";
   if(!cards.length){
-    grid.innerHTML='<div class="empty">没有匹配的角色卡'+(kw?'(换个关键词试试)':'')+'</div>';
+    let note;
+    if(searchKw) note='没有匹配的角色卡，换个关键词试试。';
+    else if(cur) note=`「${esc(cur.name)}」还没有下级卡片。<br>${childrenOf(cur.id).length===0?'点「📄 详情」看它的 10 维定义，或用下方按钮为它建下级：':''}`;
+    else note="还没有任何卡片，先建一张总卡吧。";
+    box.innerHTML=`<div class="empty">${note}
+      <br><span class="big">🛠</span><br>
+      <button class="mbtn primary" onclick="openNewFromCurrent()">＋ 新建卡片</button>
+      ${cur?`<button class="mbtn" onclick="openDrawer('${cur.id}')">📄 查看「${esc(cur.name)}」详情</button>`:""}
+    </div>`;
     return;
   }
-  cards.forEach(c=>{
-    const el=document.createElement("div");
-    el.className="cardItem";
-    const k=kindOf(c);
-    const p=c.parentId?findCard(c.parentId):null;
-    el.innerHTML=`<div class="name">${esc(c.name)}</div>
-      <div class="meta"><span class="tag k-${k}">${KIND_LABEL[k]}</span>
-        ${p?`<span class="parentLink" title="查看父卡: ${esc(p.name)}" onclick="event.stopPropagation();openDrawer('${p.id}')">↑ ${esc(p.name)}</span>`:""}
-        <span>${esc(c.sect)}</span><span>${esc(c.hall)}</span><span>${esc(c.level)}</span></div>
-      <div class="account">${esc(c.account)}</div>`;
-    el.onclick=()=>openDrawer(c.id);
-    grid.appendChild(el);
-  });
-  document.querySelectorAll(".tabBtn").forEach(b=>b.classList.toggle("active",b.dataset.tab===currentTab));
+  box.innerHTML=cards.map(cardHTML).join("");
+}
+function clickCard(id){
+  if(id!==null && !findCard(id)) id=null;
+  currentId=id; closeDrawer(); renderAll();
 }
 
-/* ============ 继承链视图(树) ============ */
-function renderTree(){
-  const box=document.getElementById("treeView");
-  const kw=searchKw.toLowerCase();
-  const all=[...TOTAL_CARDS,...SUB_CARDS,...INSTANCE_CARDS];
-  const childrenOf=p=>all.filter(c=>c.parentId===p);
-  const roots=all.filter(c=>!c.parentId||!findCard(c.parentId));
-  /* 子树是否含匹配节点 */
-  function subtreeVisible(id){
-    const c=findCard(id);
-    if(!kw||matchesKw(c,kw)) return true;
-    return childrenOf(id).some(k=>subtreeVisible(k.id));
-  }
-  function treeHTML(id,depth){
-    const c=findCard(id);
-    const m=!kw||matchesKw(c,kw);
-    const kids=childrenOf(id).filter(k=>subtreeVisible(k.id));
-    if(!m&&!kids.length) return "";
-    const line=depth?("└─ ".padStart(depth*2+2," ")):"●";
-    let h=`<div class="treeRow" style="padding-left:${depth*22}px" onclick="openDrawer('${c.id}')">
-      <span class="treeLine">${line}</span>
-      <span class="tag k-${kindOf(c)}">${KIND_LABEL[kindOf(c)]}</span>
-      <span class="treeName">${esc(c.name)}</span>
-      <span class="treeMeta">${esc(c.sect)} / ${esc(c.hall)} / ${esc(c.level)}${c.parentId?("  ↑ "+esc(findCard(c.parentId).name)):""}</span>
-      ${m&&kw?'<span class="treeHit">✓命中</span>':''}
-    </div>`;
-    kids.forEach(k=>{ h+=treeHTML(k.id,depth+1); });
-    return h;
-  }
-  let html="";
-  roots.forEach(r=>{
-    html+=`<div class="treeGroup">— 继承根: ${esc(r.name)}</div>`;
-    html+=treeHTML(r.id,0);
-  });
-  const total=all.filter(c=>!kw||matchesKw(c,kw)).length;
-  document.getElementById("f-count").textContent="共 "+total+" 张";
-  box.innerHTML=html||'<div class="empty">没有匹配的角色卡</div>';
-}
+/* ================= 渲染入口 ================= */
+function renderAll(){ renderCrumbs(); renderList(); }
 
-/* ============ 抽屉:详情 + 面包屑 + 编辑/删除 ============ */
+/* ================= 抽屉：10 维详情 ================= */
 function openDrawer(id){
-  const card=findCard(id);
-  if(!card) return;
+  const card=findCard(id); if(!card) return;
   openCardId=id;
-  const rs=resolveCard(card);
-  const chain=chainOf(card);
-  const k=kindOf(card);
-  const d=document.getElementById("drawer");
-  const crumb=chain.map(c=>`<span class="crumb" onclick="openDrawer('${c.id}')">${KIND_LABEL[kindOf(c)]}: ${esc(c.name)}</span>`)
-    .join('<span class="crumbArrow">→</span>');
-  let html=`<button class="close" onclick="closeDrawer()">×</button>
-    <h2>${esc(card.name)}</h2>
-    <div class="path">${esc(card.sect)} / ${esc(card.hall)} / ${esc(card.level)} / v${card.version||1}</div>
-    <div class="breadcrumb">${crumb}</div>
-    <div class="actions">
-      <button class="btn primary" onclick="openEdit('${card.id}')">✏️ 编辑</button>
-      <button class="btn danger" onclick="deleteCard('${card.id}')">🗑 删除</button>
+  const rs=resolveCard(card); const chain=chainOf(card); const k=kindOf(card);
+  const kids=childrenOf(id);
+  const crumb=chain.map(c=>`<span class="crumb" onclick="clickCard('${c.id}')">${KIND_LABEL[kindOf(c)]}：${esc(c.name)}</span>`)
+    .join('<span class="crumb arrow">›</span>');
+  let h=`<button class="dclose" onclick="closeDrawer()">×</button>
+    <div class="dhead"><span class="tag k-${k}">${KIND_LABEL[k]}</span><span class="dname">${esc(card.name)}</span></div>
+    <div class="dpath">${esc(card.sect||"")} / ${esc(card.hall||"")} / ${esc(card.level||"")}</div>
+    <div class="breadcrumb" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;">${crumb}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+      <button class="mbtn primary" onclick="openEdit('${card.id}')">✏️ 编辑</button>
+      <button class="mbtn" onclick="closeDrawer();clickCard('${card.id}')">${kids.length?`▾ 下级 ${kids.length} 张`:"☞ 去浏览层"}</button>
+      <button class="mbtn" style="color:var(--red)" onclick="deleteCard('${card.id}')">🗑 删除</button>
     </div>
-    <div class="legend">图例: <span class="src-total">蓝=总卡共性</span> · <span class="src-override">黄=分卡定义</span> · <span class="src-patch">绿=个人补丁</span> · <span class="src-inherit">灰=未定义</span>。点面包屑可回到上层卡。</div>`;
+    <div class="legend">图例：<span class="src-total">蓝=总卡共性</span> · <span class="src-override">琥珀=分卡定义</span> · <span class="src-patch">绿=个人补丁</span> · <span class="src-inherit">灰=未定义</span>。点面包屑可回任意上层。</div>`;
   DIMS.forEach(dim=>{
     const r=rs[dim];
-    html+=`<div class="dimBlock"><div class="dimName">${dim} <span style="font-weight:400">— ${DIM_GUIDE[dim]}</span></div>
+    h+=`<div class="dimBlock"><div class="dimName">${dim}<span>— ${DIM_GUIDE[dim]}</span></div>
       <div class="dimVal">${esc(r.val)}</div>
-      <div class="src ${SRC_CLASS[r.src]||"src-inherit"}">来源:${SRC_LABEL[r.src]||r.src} · ${SRC_TIP[r.src]||""}</div></div>`;
+      <div class="src ${SRC_CLASS[r.src]||"src-inherit"}">来源：${SRC_LABEL[r.src]||r.src} · ${SRC_TIP[r.src]||""}</div></div>`;
   });
-  d.innerHTML=html; d.classList.add("open");
+  const d=document.getElementById("drawer");
+  d.innerHTML=h; d.classList.add("open");
 }
-function closeDrawer(){
-  document.getElementById("drawer").classList.remove("open");
-  openCardId=null;
-}
+function closeDrawer(){ document.getElementById("drawer").classList.remove("open"); openCardId=null; }
 
-/* ============ 删除(带子卡依赖保护) ============ */
+/* ================= 删除（带子卡依赖保护） ================= */
 function deleteCard(id){
-  const card=findCard(id);
-  if(!card) return;
-  const kids=[...SUB_CARDS,...INSTANCE_CARDS].filter(c=>c.parentId===id);
+  const card=findCard(id); if(!card) return;
+  const kids=childrenOf(id);
   if(kids.length){
-    alert(`无法删除「${card.name}」:有 ${kids.length} 张子卡依赖它( ${kids.map(k=>k.name).join("、")} )。请先删除或改挂这些子卡的父卡。`);
+    alert(`无法删除「${card.name}」：有 ${kids.length} 张子卡依赖它（${kids.map(k=>k.name).join("、")}）。请先删除或改挂这些子卡。`);
     return;
   }
-  if(!confirm(`确定删除「${card.name}」?该操作不可撤销,将从本地存储中移除。`)) return;
-  const arr=pool(kindOf(card));
-  const idx=arr.findIndex(c=>c.id===id);
-  if(idx>=0) arr.splice(idx,1);
-  closeDrawer();
-  persist(); refreshView();
+  if(!confirm(`确定删除「${card.name}」？该操作不可撤销。`)) return;
+  const arr=(k=>k==="total"?TOTAL_CARDS:k==="sub"?SUB_CARDS:INSTANCE_CARDS)(kindOf(card));
+  const i=arr.findIndex(c=>c.id===id); if(i>=0) arr.splice(i,1);
+  if(currentId===id) currentId=card.parentId||null;
+  closeDrawer(); persist(); renderAll();
 }
 
-/* ============ 新建 / 编辑弹窗(共用 modal) ============ */
+/* ================= 新建 / 编辑弹窗 ================= */
+function openNewFromCurrent(){
+  const cur=currentId?findCard(currentId):null;
+  if(!cur) openNew("sub","");
+  else openNew(kindOf(cur)==="total"?"sub":"instance", cur.id);
+}
 function onKindChange(){
   const kind=document.getElementById("f-kind").value;
-  loadParentOptions(kind);
-  onParentChange();
-}
-function loadParentOptions(kind){
   const sel=document.getElementById("f-parent");
   sel.innerHTML='<option value="">无</option>';
-  const list= kind==="sub"?TOTAL_CARDS : kind==="instance"?SUB_CARDS : [];
-  list.forEach(c=>{ const o=document.createElement("option");o.value=c.id;o.text="["+KIND_LABEL[kindOf(c)]+"] "+c.name;sel.appendChild(o); });
-  document.getElementById("f-parenthint").textContent =
-    kind==="total" ? "总卡为独立卡,无父卡" :
-    kind==="sub"   ? "父卡(继承源): 总卡 — 分卡只写与总卡不同的差异" :
-                     "父卡(继承源): 分卡 — 实例卡只写这个人的个人补丁";
+  const list=kind==="sub"?TOTAL_CARDS:kind==="instance"?SUB_CARDS:[];
+  list.forEach(c=>{ const o=document.createElement("option"); o.value=c.id; o.text="["+KIND_LABEL[kindOf(c)]+"] "+c.name; sel.appendChild(o); });
+  document.getElementById("f-parenthint").textContent=
+    kind==="total"?"总卡为独立卡，无父卡":
+    kind==="sub"?"父卡（继承源）：总卡 —— 分卡只写与总卡不同的差异":
+    "父卡（继承源）：分卡 —— 实例卡只写这个人的个人补丁";
+  onParentChange();
 }
 function loadDimEditor(){
   const box=document.getElementById("dim-editor");
   box.innerHTML="";
   DIMS.forEach((d,i)=>{
-    const wrap=document.createElement("div");
-    wrap.className="field";
-    wrap.innerHTML=`<label>${i+1}. ${esc(d)}<span class="dimGuide">${esc(DIM_GUIDE[d])}</span></label>
-      <textarea id="f-dim-${i}" placeholder="(留空=继承父层)"></textarea>
+    const w=document.createElement("div"); w.className="field";
+    w.innerHTML=`<label>${i+1}. ${esc(d)}<span class="dimGuide">${esc(DIM_GUIDE[d])}</span></label>
+      <textarea id="f-dim-${i}" placeholder="（留空=继承父层）"></textarea>
       <span class="dimInherit inherit" id="f-dimsrc-${i}"></span>`;
-    box.appendChild(wrap);
+    box.appendChild(w);
   });
 }
-/* 依据当前填写值与父卡,刷新每个维度的继承提示 */
 function onParentChange(){
   const p=document.getElementById("f-parent").value;
   const parent=p?findCard(p):null;
@@ -484,39 +561,39 @@ function onParentChange(){
     const s=document.getElementById("f-dimsrc-"+i); if(!s) return;
     const ta=document.getElementById("f-dim-"+i);
     const explicit=(ta.value||"").trim();
-    if(explicit){ s.textContent="✏️ 本卡已在此定义(将覆盖父层)"; s.className="dimInherit patch"; return; }
+    if(explicit){ s.textContent="✏️ 本卡已在此定义（将覆盖父层）"; s.className="dimInherit patch"; return; }
     if(!parent){ s.textContent="🈳 未选父卡 — 留空则显示(继承:未定义)"; s.className="dimInherit inherit"; return; }
     const src=sourceOf(parent,d);
-    if(src){ s.textContent="🌳 继承自 ["+KIND_LABEL[src.kind]+": "+src.card.name+"]: "+(src.val+"").slice(0,44)+(src.val.length>44?"…":""); s.className="dimInherit"; }
+    if(src){ s.textContent="🌳 继承自 ["+KIND_LABEL[src.kind]+"："+src.card.name+"]: "+(src.val+"").slice(0,44)+(src.val.length>44?"…":""); s.className="dimInherit own"; }
     else { s.textContent="🈳 父链未定义此维 — 留空则显示(继承:未定义)"; s.className="dimInherit inherit"; }
   });
 }
-function openModal(title, okText){
+function openModal(title,okText){
   document.getElementById("modal-title").textContent=title;
   document.getElementById("modal-ok").textContent=okText;
   document.getElementById("modal").classList.add("open");
 }
 function closeModal(){ document.getElementById("modal").classList.remove("open"); editingId=null; }
-
-function openNew(){
+function openNew(kind,preParent){
   editingId=null;
-  document.getElementById("f-kind").value="sub";
-  document.getElementById("f-kind").disabled=false;
+  const kf=document.getElementById("f-kind");
+  kf.value=kind||"sub"; kf.disabled=false;
   document.getElementById("f-name").value="";
   document.getElementById("f-sect").value="";
   document.getElementById("f-hall").value="";
   document.getElementById("f-level").value="";
   document.getElementById("f-account").value="";
-  loadParentOptions("sub");
   loadDimEditor();
-  onParentChange();
+  onKindChange();
+  if(preParent){
+    document.getElementById("f-parent").value=preParent;
+    onParentChange();
+  }
   openModal("新建角色卡","创建");
 }
 function openEdit(id){
-  const card=findCard(id);
-  if(!card) return;
-  editingId=id;
-  const k=kindOf(card);
+  const card=findCard(id); if(!card) return;
+  editingId=id; const k=kindOf(card);
   document.getElementById("f-kind").value=k;
   document.getElementById("f-kind").disabled=true;
   document.getElementById("f-name").value=card.name||"";
@@ -524,37 +601,26 @@ function openEdit(id){
   document.getElementById("f-hall").value=card.hall||"";
   document.getElementById("f-level").value=card.level||"";
   document.getElementById("f-account").value=card.account||"";
-  loadParentOptions(k);
+  onKindChange();
   if(card.parentId){
     const sel=document.getElementById("f-parent");
     if(![...sel.options].some(o=>o.value===card.parentId)){
-      const o=document.createElement("option");
-      o.value=card.parentId; o.text="[已删除] "+card.parentId;
-      sel.appendChild(o);
+      const o=document.createElement("option"); o.value=card.parentId; o.text="[已删除] "+card.parentId; sel.appendChild(o);
     }
     sel.value=card.parentId;
   }
   loadDimEditor();
   const tgt=(k==="instance")?(card.patches||{}):(card.dims||{});
-  DIMS.forEach((d,i)=>{
-    document.getElementById("f-dim-"+i).value=tgt[d]||"";
-  });
+  DIMS.forEach((d,i)=>{ document.getElementById("f-dim-"+i).value=tgt[d]||""; });
   onParentChange();
-  openModal("编辑: "+card.name,"保存");
+  openModal("编辑："+card.name,"保存");
 }
-
-/* 收集维度编辑器中的非空值 */
 function collectDims(){
   const out={};
-  DIMS.forEach((d,i)=>{
-    const v=(document.getElementById("f-dim-"+i).value||"").trim();
-    if(v) out[d]=v;
-  });
+  DIMS.forEach((d,i)=>{ const v=(document.getElementById("f-dim-"+i).value||"").trim(); if(v) out[d]=v; });
   return out;
 }
-function saveCard(){
-  if(editingId) saveEdit(); else createCard();
-}
+function saveCard(){ if(editingId) saveEdit(); else createCard(); }
 function createCard(){
   const kind=document.getElementById("f-kind").value;
   const parent=document.getElementById("f-parent").value;
@@ -563,18 +629,18 @@ function createCard(){
   const hall=document.getElementById("f-hall").value.trim();
   const level=document.getElementById("f-level").value.trim();
   const account=document.getElementById("f-account").value.trim();
-  if(!name){alert("名称必填");return;}
-  if(kind!=="total" && !parent){alert("分卡/实例卡必须选择父卡(继承源)");return;}
-  const id="card-"+Date.now().toString(36);
-  const card={id,name,sect,hall,level,account,version:1,kind};
+  if(!name){ alert("名称必填"); return; }
+  if(kind!=="total" && !parent){ alert("分卡/实例卡必须选择父卡（继承源）"); return; }
+  const card={id:"card-"+Date.now().toString(36),name,sect,hall,level,account,version:1,kind};
   if(kind!=="total") card.parentId=parent;
   if(kind==="instance") card.patches=collectDims(); else card.dims=collectDims();
-  pool(kind).push(card);
-  closeModal(); persist(); refreshView();
+  (kind==="total"?TOTAL_CARDS:kind==="sub"?SUB_CARDS:INSTANCE_CARDS).push(card);
+  closeModal();
+  if(currentId===parent) { /* 留在当前层，新卡会出现在列表 */ }
+  persist(); renderAll(); openDrawer(card.id);
 }
 function saveEdit(){
-  const card=findCard(editingId);
-  if(!card) return;
+  const card=findCard(editingId); if(!card) return;
   const k=kindOf(card);
   const parent=document.getElementById("f-parent").value;
   const name=document.getElementById("f-name").value.trim();
@@ -582,8 +648,8 @@ function saveEdit(){
   const hall=document.getElementById("f-hall").value.trim();
   const level=document.getElementById("f-level").value.trim();
   const account=document.getElementById("f-account").value.trim();
-  if(!name){alert("名称必填");return;}
-  if(k!=="total" && !parent){alert("分卡/实例卡必须选择父卡(继承源)");return;}
+  if(!name){ alert("名称必填"); return; }
+  if(k!=="total" && !parent){ alert("分卡/实例卡必须选择父卡（继承源）"); return; }
   card.name=name; card.sect=sect; card.hall=hall; card.level=level; card.account=account;
   card.parentId=(k==="total")?undefined:parent;
   const tgt=(k==="instance")?(card.patches=card.patches||{}):(card.dims=card.dims||{});
@@ -591,63 +657,113 @@ function saveEdit(){
     const v=document.getElementById("f-dim-"+i).value.trim();
     if(v) tgt[d]=v; else delete tgt[d];
   });
-  closeModal(); persist(); refreshView();
+  closeModal(); persist(); renderAll();
   if(openCardId===card.id) openDrawer(card.id);
 }
 
-/* ============ 视图切换 ============ */
-function setTab(kind){
-  currentTab=kind;
-  const grid=document.getElementById("grid");
-  const tree=document.getElementById("treeView");
-  if(kind==="tree"){ grid.style.display="none"; tree.style.display="block"; renderTree(); }
-  else { grid.style.display="grid"; tree.style.display="none"; renderGrid(); }
-}
-
-/* ============ 导出 / 导入 JSON ============ */
+/* ================= 导出 / 导入 JSON ================= */
 function exportJSON(){
-  const data={total:TOTAL_CARDS,sub:SUB_CARDS,instance:INSTANCE_CARDS};
+  const data={version:"1.3",savedAt:new Date().toISOString(),total:TOTAL_CARDS,sub:SUB_CARDS,instance:INSTANCE_CARDS};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="角色卡数据.json";a.click();
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="角色卡数据.json"; a.click();
 }
-function importJSON(){
-  const inp=document.createElement("input");inp.type="file";inp.accept=".json";
-  inp.onchange=e=>{
-    const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();
-    r.onload=()=>{ try{
-      const d=JSON.parse(r.result);
-      TOTAL_CARDS.length=0;SUB_CARDS.length=0;INSTANCE_CARDS.length=0;
-      (d.total||[]).forEach(c=>TOTAL_CARDS.push(c));
-      (d.sub||[]).forEach(c=>SUB_CARDS.push(c));
-      (d.instance||[]).forEach(c=>INSTANCE_CARDS.push(c));
-      closeDrawer(); persist(); refreshView(); alert("导入成功");
-    }catch(err){alert("JSON格式错误");} };
-    r.readAsText(f);
-  };
-  inp.click();
+function importJSON(){ document.getElementById("import-file").click(); }
+document.getElementById("import-file").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{
+    const d=JSON.parse(r.result);
+    injectData(d);
+    closeDrawer(); persist(); renderAll(); alert(`导入成功：${ALL().length} 张卡`);
+  }catch(err){ alert("JSON 格式错误"); } };
+  r.readAsText(f);
+  e.target.value="";
+});
+
+/* ================= 主题 ================= */
+function applyTheme(t){
+  document.documentElement.dataset.theme=t;
+  const b=document.getElementById("btn-theme"); if(b) b.textContent=t==="dark"?"☀️":"🌙";
+}
+function toggleTheme(){
+  const t=document.documentElement.dataset.theme==="dark"?"light":"dark";
+  applyTheme(t);
+  try{ localStorage.setItem("rcs_theme",t); }catch(e){}
 }
 
-/* ============ 初始化:localStorage 持久化 ============ */
+/* ================= 存储：IndexedDB（降级 localStorage + 旧版迁移） ================= */
+const STORE="rcs_cards_v13";
+let db=null;
+let storeBadge;
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    if(typeof indexedDB==="undefined") return rej(new Error("no-idb"));
+    try{
+      const req=indexedDB.open("rcs-db",1);
+      req.onupgradeneeded=e=>{ e.target.result.createObjectStore("cards"); };
+      req.onsuccess=e=>res(e.target.result);
+      req.onerror=e=>rej(e.target.error||new Error("idb-err"));
+    }catch(err){ rej(err); }
+  });
+}
+function idbPut(key,val){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction("cards","readwrite");
+    tx.objectStore("cards").put(val,key);
+    tx.oncomplete=res; tx.onerror=()=>rej(tx.error||new Error("tx-err"));
+  });
+}
+function idbGet(key){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction("cards","readonly");
+    const rq=tx.objectStore("cards").get(key);
+    rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error||new Error("get-err"));
+  });
+}
+function payload(){ return {version:"1.3",savedAt:Date.now(),total:TOTAL_CARDS,sub:SUB_CARDS,instance:INSTANCE_CARDS}; }
+let persistQ=Promise.resolve();
 function persist(){
-  if(!localStorage) return;
-  try{
-    localStorage.setItem("rcs_v1",JSON.stringify({total:TOTAL_CARDS,sub:SUB_CARDS,instance:INSTANCE_CARDS}));
-  }catch(e){}
+  const p=payload();
+  persistQ=persistQ.then(()=>{
+    if(db) return idbPut(STORE,p).catch(()=>{});
+    try{ localStorage.setItem(STORE,JSON.stringify(p)); }catch(e){}
+  });
+  return persistQ;
 }
-function loadPersist(){
-  try{
-    const raw=localStorage.getItem("rcs_v1");
-    if(!raw) return;
-    const d=JSON.parse(raw);
-    if(Array.isArray(d.total)&&d.total.length){ TOTAL_CARDS.length=0; d.total.forEach(c=>TOTAL_CARDS.push(c)); }
-    if(Array.isArray(d.sub)&&d.sub.length){ SUB_CARDS.length=0; d.sub.forEach(c=>SUB_CARDS.push(c)); }
-    if(Array.isArray(d.instance)&&d.instance.length){ INSTANCE_CARDS.length=0; d.instance.forEach(c=>INSTANCE_CARDS.push(c)); }
-  }catch(e){}
+function injectData(d){
+  TOTAL_CARDS.length=0; SUB_CARDS.length=0; INSTANCE_CARDS.length=0;
+  (d.total||[]).forEach(c=>TOTAL_CARDS.push(c));
+  (d.sub||[]).forEach(c=>SUB_CARDS.push(c));
+  (d.instance||[]).forEach(c=>INSTANCE_CARDS.push(c));
+}
+function lsRead(key){ try{ const v=localStorage.getItem(key); return v?JSON.parse(v):null; }catch(e){ return null; } }
+async function loadData(){
+  if(db){
+    try{ const v=await idbGet(STORE); if(v&&v.total) return v; }catch(e){}
+  }
+  const v=lsRead(STORE); if(v&&v.total) return v;
+  const old=lsRead("rcs_v1"); if(old&&old.total) return old;   // v1.2 迁移
+  return null;
+}
+async function initStorage(){
+  try{ db=await idbOpen(); }catch(e){ db=null; }
+  storeBadge=document.getElementById("store-badge");
+  if(storeBadge) storeBadge.textContent = db?"存储：IndexedDB":"存储：localStorage（IndexedDB 不可用自动降级）";
+}
+async function initApp(){
+  await initStorage();
+  const d=await loadData();
+  if(d) injectData(d);
+  let t; try{ t=localStorage.getItem("rcs_theme"); }catch(e){}
+  t=t||(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+  applyTheme(t);
+  if(!d && db) persist();           // 首启：种子数据落库
+  else if(d && !db && !lsRead(STORE)) persist(); // 迁移后确保新库有副本（降级路径本身已存 LS）
+  renderAll();
 }
 
-loadPersist();
-renderGrid();
+document.getElementById("f-search").addEventListener("input",e=>setSearch(e.target.value));
+initApp();
 </script>
 </body>
 </html>
